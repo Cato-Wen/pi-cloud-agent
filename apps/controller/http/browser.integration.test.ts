@@ -8,6 +8,7 @@ import { oauthStates } from "../db/schema";
 import { parkSession } from "../db/sessions";
 import { saveApiKeyConnection } from "../llm/connections";
 import {
+  grantRepositoryAccess,
   manualTrigger,
   resetTables,
   seedSession,
@@ -155,17 +156,18 @@ describe("browser boundary", () => {
   });
 
   it("returns a validation error when a selected model is stale or foreign", async () => {
-    const secureApp = createApp({
-      config: testConfig({ APP_AUTH_REQUIRED: "true" }),
-      database,
-      log: silentLogger(),
-    });
     const user = await upsertAppUser(database, {
       githubUserId: "stale-model-user",
       login: "stale-model-user",
       displayName: "Stale Model User",
     });
     const config = testConfig();
+    const secureApp = createApp({
+      config: testConfig({ APP_AUTH_REQUIRED: "true" }),
+      database,
+      log: silentLogger(),
+      fetchImpl: await grantRepositoryAccess(database, config, user, ["acme/widgets"]),
+    });
     const cookie = await createWebSession(database, user.id, config.auth.sessionSecret);
     const connection = await saveApiKeyConnection(database, config, {
       userId: user.id,

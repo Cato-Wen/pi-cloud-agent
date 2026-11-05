@@ -15,6 +15,7 @@ import { saveApiKeyConnection } from "../llm/connections";
 import { createCredentialBroker } from "../secrets/broker";
 import {
   bindTestApp,
+  grantRepositoryAccess,
   manualTrigger,
   seedRun,
   seedTestUser,
@@ -317,15 +318,16 @@ describe("dashboard support", () => {
 
 describe("model connections", () => {
   it("stores credentials per user and snapshots the selected connection on a run", async () => {
-    const secureApp = createApp({
-      config: testConfig({ APP_AUTH_REQUIRED: "true" }),
-      database,
-      log: silentLogger(),
-    });
     const user = await upsertAppUser(database, {
       githubUserId: "model-user",
       login: "model-user",
       displayName: "Model User",
+    });
+    const secureApp = createApp({
+      config: testConfig({ APP_AUTH_REQUIRED: "true" }),
+      database,
+      log: silentLogger(),
+      fetchImpl: await grantRepositoryAccess(database, testConfig(), user, ["acme/widgets"]),
     });
     const cookie = await createWebSession(database, user.id, testConfig().auth.sessionSecret);
     const created = await secureApp.request("/llm/connections", {
@@ -396,17 +398,18 @@ describe("model connections", () => {
   });
 
   it("lets a resumed session explicitly switch away from a deleted connection", async () => {
-    const secureApp = createApp({
-      config: testConfig({ APP_AUTH_REQUIRED: "true" }),
-      database,
-      log: silentLogger(),
-    });
     const user = await upsertAppUser(database, {
       githubUserId: "session-model-user",
       login: "session-model-user",
       displayName: "Session Model User",
     });
     const config = testConfig();
+    const secureApp = createApp({
+      config: testConfig({ APP_AUTH_REQUIRED: "true" }),
+      database,
+      log: silentLogger(),
+      fetchImpl: await grantRepositoryAccess(database, config, user, ["acme/widgets"]),
+    });
     const cookie = await createWebSession(database, user.id, config.auth.sessionSecret);
     const original = await saveApiKeyConnection(database, config, {
       userId: user.id,

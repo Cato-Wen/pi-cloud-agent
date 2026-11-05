@@ -1,17 +1,20 @@
 import { randomBytes } from "node:crypto";
-import type { Trigger } from "@pi-cloud-agent/protocol";
+import { PAT_PROVIDER, type Trigger } from "@pi-cloud-agent/protocol";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach } from "vitest";
 import { type Config, configFrom } from "./config";
 import { createWebSession, upsertAppUser } from "./db/auth";
 import { closeDatabase, createDatabase, type Database } from "./db/client";
 import { createRun } from "./db/runs";
-import type { RunRow, SessionRow } from "./db/schema";
+import type { AppUserRow, RunRow, SessionRow } from "./db/schema";
 import { createSessionWithRun } from "./db/sessions";
+import { upsertVcsConnection } from "./db/vcs-connections";
 import { createApp } from "./http/app";
 import { saveApiKeyConnection } from "./llm/connections";
 import { createLogger, type Logger } from "./logger";
 import type { CredentialBroker } from "./secrets/broker";
+import { encryptSecret } from "./secrets/crypto";
+import { fakeGithubFetch } from "./test-support-github";
 
 /**
  * Shared setup for integration tests.
@@ -108,6 +111,36 @@ export async function seedTestUser(
     isDefault: true,
   });
   return { userId: user.id, cookie, modelConnectionId: connection.id };
+}
+
+/**
+ * In sign-in-required mode a GitHub task needs a credential that can push.
+ * Binds a personal token for the user and returns the fake GitHub that honors
+ * it for `repos`; pass the result as `createApp({ fetchImpl })`.
+ */
+export async function grantRepositoryAccess(
+  database: Database,
+  config: Config,
+  user: AppUserRow,
+  repos: string[],
+): Promise<typeof fetch> {
+  const token = `ghp_test_${user.login}_000000000000000000`;
+  await upsertVcsConnection(database, {
+    userId: user.id,
+    provider: PAT_PROVIDER,
+    accountId: user.githubUserId,
+    accountName: user.login,
+    accessToken: encryptSecret(token, config.vcs.encryptionKey),
+    refreshToken: null,
+    expiresAt: null,
+  });
+  return fakeGithubFetch({
+    [token]: {
+      user: { id: user.githubUserId, login: user.login },
+      scopes: "repo",
+      repos: repos.map((fullName) => ({ full_name: fullName, private: true, push: true })),
+    },
+  });
 }
 
 export function withTestModel(body: unknown, modelConnectionId: string): unknown {
