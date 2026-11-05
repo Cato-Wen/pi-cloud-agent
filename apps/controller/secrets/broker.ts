@@ -1,11 +1,7 @@
 import { SANDBOX_ENV, Secret } from "@pi-cloud-agent/protocol";
-import { createGithubInstallationToken } from "@pi-cloud-agent/vcs";
 import type { Config } from "../config";
+import { getAppUserById } from "../db/auth";
 import type { Database } from "../db/client";
-import {
-  loadReviewRepositories,
-  usableReviewRepository,
-} from "../integrations/review-repositories";
 import {
   modelIdFromSnapshot,
   type ResolvedLlmModel,
@@ -13,13 +9,15 @@ import {
 } from "../llm/connections";
 import type { Logger } from "../logger";
 import { getVcsProvider } from "../vcs/connections";
+import { gitAuthorEnv, resolveRepositoryAccess } from "../vcs/repository-access";
 
 /**
  * Shapes the credentials one run needs, and nothing more.
  *
- * GitHub credentials are minted from the selected App installation and scoped
- * to one repository. Other forges retain their provider-specific behavior; see
- * docs/secrets.md for the remaining sandbox-boundary limitation.
+ * GitHub credentials come from the access decision in vcs/repository-access.ts:
+ * the user's own sign-in where the App is installed, their personal token, or
+ * a read-only platform credential. Other forges retain their provider-specific
+ * behavior; see docs/secrets.md for the remaining sandbox-boundary limitation.
  */
 export interface CredentialBroker {
   mintForRepository(input: {
@@ -33,6 +31,8 @@ export interface CredentialBroker {
 interface RepositoryCredentials {
   secrets: Record<string, Secret>;
   env: Record<string, string>;
+  /** Why no forge credential was produced, when none was. */
+  problem?: string;
 }
 
 interface MintInput {
@@ -51,6 +51,11 @@ interface RunCredentials {
   model: ResolvedLlmModel;
 }
 
+interface BrokerDeps {
+  /** Outbound HTTP for GitHub token probes; tests substitute a fake. */
+  fetchImpl?: typeof fetch;
+}
+
 /** Conventional variable names expected by GitHub's CLI and git. */
 const CLI_TOKEN_ALIASES: Record<string, string[]> = {
   github: ["GITHUB_TOKEN", "GH_TOKEN"],
@@ -67,7 +72,9 @@ export function createCredentialBroker(
   config: Config,
   database: Database,
   log: Logger,
+  deps: BrokerDeps = {},
 ): CredentialBroker {
+  const fetchImpl = deps.fetchImpl ?? fetch;
   return {
     async mintForRepository({
       userId,
@@ -78,22 +85,23 @@ export function createCredentialBroker(
       const env: Record<string, string> = {};
       try {
         const token =
-          provider === "github" && config.github.appId && config.github.privateKey
-            ? await mintGithubRepositoryToken(config, database, userId, repoFullName)
+          provider === "github"
+            ? await mintGithubRepositoryToken(config, database, userId, repoFullName, fetchImpl)
             : await (await getVcsProvider(database, config, provider, userId)).mintRepoToken(
                 repoFullName,
               );
         secrets[SANDBOX_ENV.scmToken] = token;
         for (const alias of CLI_TOKEN_ALIASES[provider] ?? []) secrets[alias] = token;
         env[SANDBOX_ENV.scmTokenUsername] = GIT_USERNAMES[provider] ?? "x-access-token";
+        return { secrets, env };
       } catch (error) {
-        log.warn("no forge credential for repository environment test", {
-          provider,
-          repo: repoFullName,
-          error,
-        });
+        log.warn("no forge credential for repository", { provider, repo: repoFullName, error });
+        return {
+          secrets,
+          env,
+          problem: error instanceof Error ? error.message : String(error),
+        };
       }
-      return { secrets, env };
     },
 
     async mintForRun({
@@ -131,10 +139,13 @@ export function createCredentialBroker(
         config.auth.requireUser &&
         !repository.secrets[SANDBOX_ENV.scmToken]
       ) {
-        throw new Error("could not mint a repository-scoped GitHub App credential");
+        throw new Error(repository.problem ?? "could not mint a GitHub credential for the run");
       }
       Object.assign(secrets, repository.secrets);
       Object.assign(env, repository.env);
+
+      const user = await getAppUserById(database, userId);
+      if (user) Object.assign(env, gitAuthorEnv(user));
 
       env[SANDBOX_ENV.modelAuthType] = model.authType;
       return { secrets, env, model };
@@ -142,19 +153,23 @@ export function createCredentialBroker(
   };
 }
 
+/** Write access first; a read-only credential still lets the agent analyze code. */
 async function mintGithubRepositoryToken(
   config: Config,
   database: Database,
   userId: string,
   repoFullName: string,
+  fetchImpl: typeof fetch,
 ): Promise<Secret> {
-  const access = await loadReviewRepositories(database, config, userId);
-  const repository = usableReviewRepository(access.repositories, repoFullName);
-  if (!repository) throw new Error("repository is not accessible through the GitHub App");
-  const credential = await createGithubInstallationToken(
-    { appId: config.github.appId, privateKey: config.github.privateKey },
-    repository.installationId,
-    repoFullName,
-  );
-  return new Secret(credential.token, "repository-scoped github installation token");
+  const user = await getAppUserById(database, userId);
+  if (!user) throw new Error("run user no longer exists");
+  const write = await resolveRepositoryAccess(database, config, user, repoFullName, "write", {
+    fetchImpl,
+  });
+  if (write.mode !== "none") return write.token;
+  const read = await resolveRepositoryAccess(database, config, user, repoFullName, "read", {
+    fetchImpl,
+  });
+  if (read.mode !== "none") return read.token;
+  throw new Error(write.reason);
 }

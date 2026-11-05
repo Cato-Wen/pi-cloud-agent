@@ -31,6 +31,14 @@ export async function upsertAppUser(
   return user;
 }
 
+export async function getAppUserById(
+  database: Database,
+  id: string,
+): Promise<AppUserRow | null> {
+  const [user] = await database.select().from(appUsers).where(eq(appUsers.id, id)).limit(1);
+  return user ?? null;
+}
+
 export async function createWebSession(
   database: Database,
   userId: string,

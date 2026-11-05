@@ -119,7 +119,8 @@ export interface SessionListResponse {
 }
 
 export interface ReposResponse {
-  repos: VcsRepository[];
+  /** `access` says what the signed-in user's credentials allow; absent for anonymous reads. */
+  repos: Array<VcsRepository & { access?: "write" | "read" }>;
   /** Where the list came from: a connected identity or nothing. */
   source: "connection" | "none";
 }

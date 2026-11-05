@@ -6,7 +6,7 @@ import {
   type VcsRepository,
 } from "@pi-cloud-agent/protocol";
 import { z } from "zod";
-import { fetchJson } from "./http";
+import { type ForgeHttpDeps, fetchJson } from "./http";
 
 const API_BASE = "https://api.github.com";
 const ACCEPT = "application/vnd.github+json";
@@ -56,8 +56,12 @@ export interface GithubPullRequestRevision {
 }
 
 /** GitHub metadata and checkout access supplied by the connected user's token. */
-export function createGitHubProvider(accessToken: string): VCSProvider {
+export function createGitHubProvider(
+  accessToken: string,
+  deps: ForgeHttpDeps = {},
+): VCSProvider {
   const token = z.string().default("").parse(accessToken);
+  const fetchImpl = deps.fetchImpl;
 
   return {
     name: "github",
@@ -79,7 +83,7 @@ export function createGitHubProvider(accessToken: string): VCSProvider {
       try {
         const repository = await fetchJson<{ default_branch?: string }>(
           `${API_BASE}/repos/${parsed.owner}/${parsed.name}`,
-          { headers: apiHeaders(token) },
+          { headers: apiHeaders(token), fetchImpl },
         );
         return {
           provider: "github",
@@ -112,7 +116,7 @@ export function createGitHubProvider(accessToken: string): VCSProvider {
       try {
         const branches = await fetchJson<Array<{ name?: string }>>(
           `${API_BASE}/repos/${parsed.owner}/${parsed.name}/branches?per_page=100`,
-          { headers: apiHeaders(token) },
+          { headers: apiHeaders(token), fetchImpl },
         );
         return branches.flatMap((branch) => (branch.name ? [branch.name] : []));
       } catch {
@@ -123,7 +127,7 @@ export function createGitHubProvider(accessToken: string): VCSProvider {
     async listRepos(): Promise<VcsRepository[]> {
       if (!token) return [];
       try {
-        return await listGithubRepositories(token);
+        return await listGithubRepositories(token, fetchImpl);
       } catch {
         return [];
       }
@@ -287,12 +291,15 @@ export async function fetchGithubPullRequestRevision(
   };
 }
 
-async function listGithubRepositories(accessToken: string): Promise<VcsRepository[]> {
+async function listGithubRepositories(
+  accessToken: string,
+  fetchImpl?: typeof fetch,
+): Promise<VcsRepository[]> {
   const repositories: VcsRepository[] = [];
   for (let page = 1; page <= 5; page += 1) {
     const batch = await fetchJson<GithubRepository[]>(
       `${API_BASE}/user/repos?per_page=100&sort=updated&page=${page}`,
-      { headers: apiHeaders(accessToken) },
+      { headers: apiHeaders(accessToken), fetchImpl },
     );
     repositories.push(...batch.flatMap(toRepository));
     if (batch.length < 100) break;

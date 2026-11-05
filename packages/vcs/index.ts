@@ -1,21 +1,26 @@
 import type { VCSProvider } from "@pi-cloud-agent/protocol";
 import { createAzureDevOpsProvider } from "./azure-devops";
 import { createGitHubProvider } from "./github";
+import type { ForgeHttpDeps } from "./http";
 
-type Factory = (accessToken: string) => VCSProvider;
+type Factory = (accessToken: string, deps?: ForgeHttpDeps) => VCSProvider;
 
 const FACTORIES: Record<string, Factory> = {
   "azure-devops": createAzureDevOpsProvider,
   github: createGitHubProvider,
 };
 
-export function createVcsProvider(name: string, accessToken: string): VCSProvider {
+export function createVcsProvider(
+  name: string,
+  accessToken: string,
+  deps: ForgeHttpDeps = {},
+): VCSProvider {
   const factory = FACTORIES[name];
   if (!factory) {
     const known = Object.keys(FACTORIES).sort().join(", ");
     throw new Error(`Unknown VCS provider "${name}". Available: ${known}.`);
   }
-  return factory(accessToken);
+  return factory(accessToken, deps);
 }
 
 export { createAzureDevOpsProvider } from "./azure-devops";
@@ -49,6 +54,7 @@ export {
   listGithubTokenRepositories,
   probeGithubRepoAccess,
 } from "./github-token";
+export type { ForgeHttpDeps } from "./http";
 export { createVcsOAuthProvider } from "./oauth";
 
 export function vcsProviderNames(): string[] {

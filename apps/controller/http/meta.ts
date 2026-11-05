@@ -1,10 +1,15 @@
-import type { BranchesResponse, ReposResponse, VcsRepository } from "@pi-cloud-agent/protocol";
+import type { BranchesResponse, ReposResponse, VCSProvider } from "@pi-cloud-agent/protocol";
 import { vcsProviderNames } from "@pi-cloud-agent/vcs";
 import { Hono } from "hono";
 import type { Config } from "../config";
 import type { Database } from "../db/client";
-import { loadReviewRepositories } from "../integrations/review-repositories";
+import type { AppUserRow } from "../db/schema";
 import { getVcsProvider } from "../vcs/connections";
+import {
+  listWritableRepositories,
+  resolveRepositoryAccess,
+  vcsProviderForAccess,
+} from "../vcs/repository-access";
 import type { AppEnv } from "./deps";
 
 export function metaRoutes(): Hono<AppEnv> {
@@ -12,7 +17,7 @@ export function metaRoutes(): Hono<AppEnv> {
 
   app.get("/repos", async (c) => {
     return c.json(
-      await resolveRepos(c.get("database"), c.get("config"), c.get("user")?.id ?? null),
+      await resolveRepos(c.get("database"), c.get("config"), c.get("user"), c.get("fetchImpl")),
     );
   });
 
@@ -21,23 +26,15 @@ export function metaRoutes(): Hono<AppEnv> {
     const repo = c.req.query("repo") ?? "";
     const response: BranchesResponse = { branches: [], default: null };
     try {
-      if (
-        !(await repositoryIsSelectable(
-          c.get("database"),
-          c.get("config"),
-          c.get("user")?.id ?? null,
-          provider,
-          repo,
-        ))
-      ) {
-        return c.json(response);
-      }
-      const vcs = await getVcsProvider(
+      const vcs = await providerForRepository(
         c.get("database"),
         c.get("config"),
+        c.get("user"),
+        c.get("fetchImpl"),
         provider,
-        c.get("user")?.id ?? null,
+        repo,
       );
+      if (!vcs) return c.json(response);
       response.branches = await vcs.listBranches(repo);
       response.default = await vcs.getDefaultBranch(repo);
     } catch (error) {
@@ -49,26 +46,26 @@ export function metaRoutes(): Hono<AppEnv> {
   return app;
 }
 
+/** Sign-in required means GitHub repositories come from the user's credentials, not a bare token. */
+function accessGoverned(config: Config, provider: string): boolean {
+  return provider === "github" && config.auth.requireUser;
+}
+
 async function resolveRepos(
   database: Database,
   config: Config,
-  userId: string | null,
+  user: AppUserRow | null,
+  fetchImpl: typeof fetch,
 ): Promise<ReposResponse> {
-  const repos: VcsRepository[] = [];
+  const repos: ReposResponse["repos"] = [];
   for (const provider of vcsProviderNames()) {
     try {
-      const vcs = await getVcsProvider(database, config, provider, userId);
-      const available = await vcs.listRepos();
-      if (provider !== "github" || !requiresGithubInstallation(config)) {
-        repos.push(...available);
+      if (user && accessGoverned(config, provider)) {
+        repos.push(...(await listWritableRepositories(database, config, user, { fetchImpl })));
         continue;
       }
-      if (!userId) continue;
-      const access = await loadReviewRepositories(database, config, userId);
-      const allowed = new Set(
-        access.repositories.filter((item) => !item.problem).map((item) => item.repo),
-      );
-      repos.push(...available.filter((repo) => allowed.has(repo.fullName)));
+      const vcs = await getVcsProvider(database, config, provider, user?.id ?? null);
+      repos.push(...(await vcs.listRepos()));
     } catch {
       // A disconnected or expired identity contributes no repositories.
     }
@@ -79,19 +76,19 @@ async function resolveRepos(
   };
 }
 
-async function repositoryIsSelectable(
+async function providerForRepository(
   database: Database,
   config: Config,
-  userId: string | null,
+  user: AppUserRow | null,
+  fetchImpl: typeof fetch,
   provider: string,
   repo: string,
-): Promise<boolean> {
-  if (provider !== "github" || !requiresGithubInstallation(config)) return true;
-  if (!userId) return false;
-  const access = await loadReviewRepositories(database, config, userId);
-  return access.repositories.some((item) => item.repo === repo && !item.problem);
-}
-
-function requiresGithubInstallation(config: Config): boolean {
-  return config.auth.requireUser && Boolean(config.github.appId);
+): Promise<VCSProvider | null> {
+  if (!user || !accessGoverned(config, provider)) {
+    return getVcsProvider(database, config, provider, user?.id ?? null);
+  }
+  const access = await resolveRepositoryAccess(database, config, user, repo, "read", {
+    fetchImpl,
+  });
+  return access.mode === "none" ? null : vcsProviderForAccess(access, { fetchImpl });
 }

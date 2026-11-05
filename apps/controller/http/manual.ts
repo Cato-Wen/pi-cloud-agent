@@ -6,11 +6,9 @@ import {
 import type { Context } from "hono";
 import type { Config } from "../config";
 import type { Database } from "../db/client";
-import {
-  loadReviewRepositories,
-  usableReviewRepository,
-} from "../integrations/review-repositories";
+import type { AppUserRow } from "../db/schema";
 import { getVcsProvider } from "../vcs/connections";
+import { resolveRepositoryAccess, vcsProviderForAccess } from "../vcs/repository-access";
 import type { AppEnv } from "./deps";
 
 interface ManualRequest {
@@ -26,7 +24,8 @@ async function readManualRequest(
   body: unknown,
   config: Config,
   database: Database,
-  userId: string | null,
+  user: AppUserRow | null,
+  fetchImpl: typeof fetch,
 ): Promise<ManualRequestResult> {
   const parsed = createRunRequestSchema.safeParse(body);
   if (!parsed.success) {
@@ -36,7 +35,7 @@ async function readManualRequest(
     return {
       ok: true,
       body: parsed.data,
-      request: await resolveManualRequest(parsed.data, config, database, userId),
+      request: await resolveManualRequest(parsed.data, config, database, user, fetchImpl),
     };
   } catch (error) {
     return {
@@ -51,7 +50,8 @@ export async function readManualRouteRequest(c: Context<AppEnv>): Promise<Manual
     await c.req.json().catch(() => null),
     c.get("config"),
     c.get("database"),
-    c.get("user")?.id ?? null,
+    c.get("user"),
+    c.get("fetchImpl"),
   );
 }
 
@@ -60,21 +60,13 @@ async function resolveManualRequest(
   body: CreateRunBody,
   config: Config,
   database: Database,
-  userId: string | null,
+  user: AppUserRow | null,
+  fetchImpl: typeof fetch,
 ): Promise<ManualRequest> {
-  const vcs = await getVcsProvider(database, config, body.provider, userId);
+  const vcs = await providerForRequest(body, config, database, user, fetchImpl);
   const repository = await vcs.getRepository(body.repo);
   if (!repository)
     throw new Error("repository is not available through the connected identity");
-  if (body.provider === "github" && config.auth.requireUser && config.github.appId) {
-    if (!userId) throw new Error("authentication is required to run a task");
-    const access = await loadReviewRepositories(database, config, userId);
-    if (!usableReviewRepository(access.repositories, body.repo)) {
-      throw new Error(
-        "Install the GitHub App on this repository and grant the required permissions before starting a task.",
-      );
-    }
-  }
   const branch =
     body.branch?.trim() || (await vcs.getDefaultBranch(body.repo).catch(() => null)) || "";
   const repo: RepoRef = {
@@ -90,4 +82,28 @@ async function resolveManualRequest(
     prNumber: null,
   };
   return { repo };
+}
+
+/**
+ * A task's primary repository must be writable by the signed-in user. The
+ * credential that passes that check is also the one used to read metadata,
+ * so a developer whose only access is a personal token is not asked through
+ * a GitHub App sign-in that cannot see the repository.
+ */
+async function providerForRequest(
+  body: CreateRunBody,
+  config: Config,
+  database: Database,
+  user: AppUserRow | null,
+  fetchImpl: typeof fetch,
+) {
+  if (body.provider !== "github" || !config.auth.requireUser) {
+    return getVcsProvider(database, config, body.provider, user?.id ?? null);
+  }
+  if (!user) throw new Error("authentication is required to run a task");
+  const access = await resolveRepositoryAccess(database, config, user, body.repo, "write", {
+    fetchImpl,
+  });
+  if (access.mode === "none") throw new Error(access.reason);
+  return vcsProviderForAccess(access, { fetchImpl });
 }

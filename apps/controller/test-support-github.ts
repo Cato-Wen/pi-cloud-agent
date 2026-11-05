@@ -1,10 +1,11 @@
 /**
  * A stand-in for GitHub over `fetch`, keyed by the token each request carries.
  *
- * Routes the three things the credential code asks GitHub: who a token is
- * (`GET /user`), what it can see (`GET /user/repos`), and whether git accepts it
- * for a repository (`info/refs?service=…`). Everything else is 404. Tests
- * inject it through `Deps.fetchImpl`; nothing is mocked at module level.
+ * Routes what the credential code asks GitHub: who a token is (`GET /user`),
+ * what it can see (`GET /user/repos`, `GET /repos/:owner/:name`), and whether
+ * git accepts it for a repository (`info/refs?service=…`). Everything else is
+ * 404. Tests inject it through `Deps.fetchImpl`; nothing is mocked at module
+ * level.
  */
 
 export interface FakeGithubRepo {
@@ -57,21 +58,32 @@ function specForToken(spec: SpecInput, token: string | null): FakeGithubSpec | u
 
 function answerRest(spec: FakeGithubSpec, url: URL): Response | null {
   if (url.host !== "api.github.com") return null;
-  if (url.pathname === "/user") {
-    return json(
-      200,
-      { id: spec.user.id, login: spec.user.login },
-      {
-        ...(spec.scopes ? { "x-oauth-scopes": spec.scopes } : {}),
-        ...(spec.expires ? { "github-authentication-token-expiration": spec.expires } : {}),
-      },
-    );
-  }
+  if (url.pathname === "/user") return answerUser(spec);
   if (url.pathname === "/user/repos") {
     const firstPage = (url.searchParams.get("page") ?? "1") === "1";
     return json(200, firstPage ? spec.repos.map(toRestRepo) : []);
   }
-  return null;
+  const repoPath = /^\/repos\/([^/]+\/[^/]+)(\/branches)?$/.exec(url.pathname);
+  return repoPath ? answerRepository(spec, repoPath[1] ?? "", Boolean(repoPath[2])) : null;
+}
+
+function answerUser(spec: FakeGithubSpec): Response {
+  return json(
+    200,
+    { id: spec.user.id, login: spec.user.login },
+    {
+      ...(spec.scopes ? { "x-oauth-scopes": spec.scopes } : {}),
+      ...(spec.expires ? { "github-authentication-token-expiration": spec.expires } : {}),
+    },
+  );
+}
+
+function answerRepository(spec: FakeGithubSpec, fullName: string, branches: boolean): Response {
+  const known = spec.repos.find((item) => item.full_name === fullName);
+  if (!known) return json(404, { message: "Not Found" });
+  return branches
+    ? json(200, [{ name: known.default_branch ?? "main" }])
+    : json(200, toRestRepo(known));
 }
 
 function answerGit(spec: FakeGithubSpec, url: URL): Response | null {
