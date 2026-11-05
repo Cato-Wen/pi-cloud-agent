@@ -36,6 +36,19 @@ export {
 } from "./github";
 export type { GithubOpenPull, GithubReviewReader } from "./github-repositories";
 export { createGithubReviewReader, githubAppInstallUrl } from "./github-repositories";
+export type {
+  GithubTokenDeps,
+  GithubTokenInfo,
+  GithubTokenKind,
+  GithubTokenRepository,
+  RepoAccess,
+} from "./github-token";
+export {
+  githubTokenKind,
+  inspectGithubToken,
+  listGithubTokenRepositories,
+  probeGithubRepoAccess,
+} from "./github-token";
 export { createVcsOAuthProvider } from "./oauth";
 
 export function vcsProviderNames(): string[] {

@@ -14,6 +14,7 @@ The sandbox still has no VCS client. GitHub reviews and comment replies are narr
 | `http.ts` | `fetchJson` with a timeout and error context |
 | `github.ts` | GitHub user-token identity, installation verification, App-token minting, and review/comment actuators |
 | `github-repositories.ts` | paginated installation/repository/open PR reads; errors remain explicit for review diagnostics |
+| `github-token.ts` | what a personal or platform token can do: identity and scopes from REST, read/write per repository from git's `info/refs` handshake |
 | `azure-devops.ts` | Azure DevOps through Microsoft Entra delegated OAuth |
 | `oauth.ts` | OAuth authorization, exchange, refresh, and identity lookup |
 | `index.test.ts` | the provider registry |
