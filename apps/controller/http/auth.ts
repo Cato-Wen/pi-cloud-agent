@@ -1,8 +1,8 @@
 import { type Context, Hono, type Next } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
+import { isOperator } from "../auth/operator";
 import { createWebSession, deleteWebSession } from "../db/auth";
 import type { AppUserRow } from "../db/schema";
-import { isOperator } from "../plugins/marketplace";
 import { beginVcsConnection, finishGithubLogin } from "../vcs/connections";
 import type { AppEnv } from "./deps";
 

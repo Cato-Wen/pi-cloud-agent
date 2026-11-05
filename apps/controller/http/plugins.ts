@@ -1,11 +1,11 @@
 import { join } from "node:path";
 import { type Context, Hono } from "hono";
 import { z } from "zod";
+import { isOperator } from "../auth/operator";
 import type { Config } from "../config";
 import type { AppUserRow } from "../db/schema";
 import {
   installPluginForUser,
-  isOperator,
   listCatalogForUser,
   publishPlugin,
   seedMarketplacePlugins,

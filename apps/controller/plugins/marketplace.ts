@@ -423,8 +423,3 @@ async function appendAudit(
     detail,
   });
 }
-
-export function isOperator(config: Config, login: string | undefined): boolean {
-  if (!login) return false;
-  return config.plugins.operatorLogins.includes(login.toLowerCase());
-}

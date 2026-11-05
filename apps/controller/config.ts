@@ -125,6 +125,8 @@ export interface Config {
   auth: {
     requireUser: boolean;
     sessionSecret: string;
+    /** Lower-cased GitHub logins with operator rights. See auth/operator.ts. */
+    operatorLogins: string[];
   };
   vcs: { encryptionKey: string };
   llm: { encryptionKey: string };
@@ -135,7 +137,6 @@ export interface Config {
     privateKey: string;
   };
   plugins: {
-    operatorLogins: string[];
     artifactRoot: string;
     marketplaceRoot: string;
     mcpCommandAllowlist: string[];
@@ -202,6 +203,9 @@ function build(env: Env): Config {
     auth: {
       requireUser,
       sessionSecret: value.APP_SESSION_SECRET,
+      operatorLogins: value.OPERATOR_GITHUB_LOGINS.split(",")
+        .map((login) => login.trim().toLowerCase())
+        .filter((login) => login.length > 0),
     },
     vcs: { encryptionKey: value.VCS_ENCRYPTION_KEY },
     llm: { encryptionKey: value.LLM_ENCRYPTION_KEY },
@@ -212,9 +216,6 @@ function build(env: Env): Config {
       privateKey: value.GITHUB_APP_PRIVATE_KEY.replace(/\\n/g, "\n"),
     },
     plugins: {
-      operatorLogins: value.OPERATOR_GITHUB_LOGINS.split(",")
-        .map((login) => login.trim().toLowerCase())
-        .filter((login) => login.length > 0),
       artifactRoot:
         value.PLUGIN_ARTIFACT_ROOT.trim() ||
         resolve(import.meta.dirname, "../../.pi-plugin-artifacts"),
