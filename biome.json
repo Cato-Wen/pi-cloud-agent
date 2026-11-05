@@ -9,7 +9,9 @@
       "!**/dist",
       "!**/*.md",
       "!**/db/migrations",
-      "!**/*.css"
+      "!**/*.css",
+      "!**/.claude",
+      "!docs/design/*.html"
     ]
   },
   "formatter": {

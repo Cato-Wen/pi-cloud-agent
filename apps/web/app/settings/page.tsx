@@ -14,6 +14,7 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 import { GITHUB_INSTALLATION_CHANGED } from "@/components/GithubOnboarding";
 import { LlmConnectionSection } from "@/components/LlmConnectionSection";
 import { LLM_CONNECTION_CHANGED } from "@/components/ModelOnboarding";
+import { PersonalTokenCard } from "@/components/PersonalTokenCard";
 import { AzureDevOpsMarkIcon, GithubMarkIcon } from "@/components/ProviderIcons";
 import { RepositorySettings } from "@/components/RepositorySettings";
 import { Button } from "@/components/ui/button";
@@ -134,7 +135,8 @@ function SettingsContent() {
             <div className="mb-8">
               <h2 className="text-xl font-medium tracking-[-0.02em]">GitHub account</h2>
               <p className="mt-2 text-sm text-muted-foreground">
-                Your signed-in identity. Repository access is selected separately in the
+                Your signed-in identity. Add a personal access token to develop with your own
+                identity; repositories reached through the GitHub App are listed in the
                 Repositories tab.
               </p>
             </div>
@@ -148,6 +150,7 @@ function SettingsContent() {
                   onDisconnect={() => disconnect(connection.provider)}
                 />
               ))}
+              <PersonalTokenCard onNotice={notify} />
             </div>
 
             <div className="mb-8 mt-12">

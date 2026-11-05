@@ -1,7 +1,14 @@
 "use client";
 
 import type { AppUserSummary } from "@pi-cloud-agent/protocol";
-import { LogOutIcon, MoonIcon, PuzzleIcon, Settings2Icon, SunIcon } from "lucide-react";
+import {
+  KeyRoundIcon,
+  LogOutIcon,
+  MoonIcon,
+  PuzzleIcon,
+  Settings2Icon,
+  SunIcon,
+} from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
@@ -110,6 +117,17 @@ export function AccountMenu({ compact = false, placement = "top" }: AccountMenuP
             <PuzzleIcon className="size-3.5" />
             Plugins
           </Link>
+          {user?.isOperator && (
+            <Link
+              href="/admin/credentials"
+              role="menuitem"
+              className="account-menu-item"
+              onClick={() => setOpen(false)}
+            >
+              <KeyRoundIcon className="size-3.5" />
+              Admin · Credentials
+            </Link>
+          )}
           <button
             type="button"
             role="menuitem"

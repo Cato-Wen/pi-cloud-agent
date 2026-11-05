@@ -6,6 +6,9 @@ import type {
   CreateSessionTurnRequest,
   LlmConnectionSummary,
   LlmConnectionsResponse,
+  PersonalTokenStatus,
+  PlatformCredentialSummary,
+  PlatformCredentialsResponse,
   PluginCatalogEntry,
   PluginCatalogResponse,
   PullRequestReviewsResponse,
@@ -189,6 +192,50 @@ export const api = {
     provider === "github"
       ? `${API_BASE}/auth/github/connect?returnTo=settings`
       : `${API_BASE}/vcs/connections/${encodeURIComponent(provider)}/connect`,
+
+  getPersonalToken: (): Promise<PersonalTokenStatus> =>
+    request<PersonalTokenStatus>("/vcs/github/pat"),
+
+  savePersonalToken: (token: string): Promise<PersonalTokenStatus> =>
+    request<PersonalTokenStatus>("/vcs/github/pat", {
+      method: "PUT",
+      body: JSON.stringify({ token }),
+    }),
+
+  deletePersonalToken: (): Promise<{ ok: boolean }> =>
+    request<{ ok: boolean }>("/vcs/github/pat", { method: "DELETE" }),
+
+  listPlatformCredentials: (): Promise<PlatformCredentialSummary[]> =>
+    request<PlatformCredentialsResponse>("/admin/credentials").then((r) => r.credentials),
+
+  createPlatformCredential: (body: {
+    label: string;
+    token: string;
+  }): Promise<PlatformCredentialSummary> =>
+    request<PlatformCredentialSummary>("/admin/credentials", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+
+  updatePlatformCredential: (
+    id: string,
+    body: { label?: string; token?: string },
+  ): Promise<PlatformCredentialSummary> =>
+    request<PlatformCredentialSummary>(`/admin/credentials/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    }),
+
+  probePlatformCredential: (id: string): Promise<PlatformCredentialSummary> =>
+    request<PlatformCredentialSummary>(`/admin/credentials/${encodeURIComponent(id)}/probe`, {
+      method: "POST",
+      body: JSON.stringify({}),
+    }),
+
+  deletePlatformCredential: (id: string): Promise<{ ok: boolean }> =>
+    request<{ ok: boolean }>(`/admin/credentials/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    }),
 
   bindGithubInstallation: (installationId: string): Promise<{ ok: boolean }> =>
     request<{ ok: boolean }>("/integrations/github/setup", {

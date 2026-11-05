@@ -1,163 +1,131 @@
 "use client";
 
-import { ExternalLinkIcon, LogOutIcon, RefreshCwIcon } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
-import { GithubMarkIcon } from "@/components/ProviderIcons";
+import { ClipboardCopyIcon, KeyRoundIcon, UsersIcon, XIcon } from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
+import { PERSONAL_TOKEN_CHANGED } from "@/components/PersonalTokenCard";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
 
 export const GITHUB_INSTALLATION_CHANGED = "github-installation-changed";
+const DISMISSED_KEY = "pca-access-onboarding-dismissed";
 
-type State =
-  | { kind: "checking" }
-  | { kind: "ready" }
-  | { kind: "required"; installUrl: string | null; problem: string | null };
+type State = { kind: "checking" } | { kind: "ready" } | { kind: "needed"; login: string };
 
-/** Blocks repository work until GitHub reports at least one App-authorized repository. */
+/**
+ * Shown on the new-task page until the user has some way to reach a
+ * repository: a personal token (developers) or an agent / GitHub App
+ * installation (product and QA). It never blocks the page — signing in is
+ * enough to look around — and it goes away by itself once access exists.
+ */
 export function GithubOnboarding() {
+  const pathname = usePathname();
   const [state, setState] = useState<State>({ kind: "checking" });
-  const titleRef = useRef<HTMLHeadingElement>(null);
+  const [dismissed, setDismissed] = useState(true);
+  const [copied, setCopied] = useState(false);
 
   const refresh = useCallback(async () => {
-    setState({ kind: "checking" });
     try {
-      const result = await api.listReviewRepositories();
-      setState(
-        result.repositories.some((repository) => repository.problem === null)
-          ? { kind: "ready" }
-          : { kind: "required", installUrl: result.installUrl, problem: result.problem },
-      );
-    } catch (cause) {
-      setState({
-        kind: "required",
-        installUrl: null,
-        problem: cause instanceof Error ? cause.message : String(cause),
-      });
+      const me = await api.getCurrentUser();
+      if (me.hasPat) {
+        setState({ kind: "ready" });
+        return;
+      }
+      const installed = await api
+        .listReviewRepositories()
+        .then((result) => result.repositories.some((repository) => repository.problem === null))
+        .catch(() => false);
+      setState(installed ? { kind: "ready" } : { kind: "needed", login: me.login });
+    } catch {
+      setState({ kind: "ready" });
     }
   }, []);
 
   useEffect(() => {
+    setDismissed(window.sessionStorage.getItem(DISMISSED_KEY) === "1");
     void refresh();
     window.addEventListener(GITHUB_INSTALLATION_CHANGED, refresh);
-    return () => window.removeEventListener(GITHUB_INSTALLATION_CHANGED, refresh);
+    window.addEventListener(PERSONAL_TOKEN_CHANGED, refresh);
+    return () => {
+      window.removeEventListener(GITHUB_INSTALLATION_CHANGED, refresh);
+      window.removeEventListener(PERSONAL_TOKEN_CHANGED, refresh);
+    };
   }, [refresh]);
 
-  useEffect(() => {
-    if (state.kind !== "required") return;
-    const shell = document.querySelector<HTMLElement>(".app-shell");
-    shell?.setAttribute("inert", "");
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    titleRef.current?.focus();
-    return () => {
-      shell?.removeAttribute("inert");
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [state.kind]);
+  if (state.kind !== "needed" || dismissed || pathname !== "/chat") return null;
 
-  // The initial entitlement check is intentionally silent. The API still gates
-  // repository work while this runs; the dialog only appears after a confirmed
-  // missing installation or a failed check.
-  if (state.kind !== "required" || typeof document === "undefined") return null;
+  const requestMessage = `Hi, please assign me an agent on zen8agent. My GitHub login is ${state.login}.`;
 
-  return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/70 px-4 backdrop-blur-md">
-      <section
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="github-onboarding-title"
-        className="w-full max-w-md overflow-hidden rounded-2xl border border-border bg-background shadow-2xl"
-      >
-        <div className="border-b border-border bg-muted/35 px-6 py-5">
-          <div className="flex items-center gap-3">
-            <div className="grid size-10 place-items-center rounded-xl border border-border bg-background">
-              <GithubMarkIcon className="size-5" />
-            </div>
-            <div>
-              <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-                One required step
-              </p>
-              <h1
-                ref={titleRef}
-                id="github-onboarding-title"
-                tabIndex={-1}
-                className="mt-1 text-base font-medium outline-none"
-              >
-                Choose repositories for zen8agent
-              </h1>
-            </div>
-          </div>
-        </div>
-
-        <div className="px-6 py-6">
-          <p className="text-sm leading-6 text-muted-foreground">
-            You are signed in. Now install the GitHub App and choose the repositories the agent
-            may clone, work in, and create pull requests for.
-          </p>
-
-          <ol className="mt-5 space-y-3 text-sm">
-            <OnboardingStep
-              number="1"
-              text="Open GitHub and select an account or organization."
-            />
-            <OnboardingStep
-              number="2"
-              text="Grant access to all repositories or choose specific ones."
-            />
-            <OnboardingStep
-              number="3"
-              text="Return here and we will verify access before enabling tasks."
-            />
-          </ol>
-
-          {state.kind === "required" && state.problem ? (
-            <p
-              role="alert"
-              className="mt-5 rounded-lg border border-border bg-muted/40 px-3 py-2 text-xs leading-5 text-muted-foreground"
-            >
-              {state.problem}
-            </p>
-          ) : null}
-
-          <div className="mt-6 grid gap-2">
-            {state.kind === "required" && state.installUrl ? (
-              <a
-                href={state.installUrl}
-                className="inline-flex h-8 w-full items-center justify-center gap-1.5 rounded-lg bg-primary px-2.5 text-sm font-medium text-primary-foreground transition-colors outline-none hover:bg-primary/80 focus-visible:ring-3 focus-visible:ring-ring/50"
-              >
-                <GithubMarkIcon className="size-4" />
-                Choose repositories on GitHub
-                <ExternalLinkIcon className="size-3.5" />
-              </a>
-            ) : null}
-            <Button type="button" variant="outline" onClick={() => void refresh()}>
-              <RefreshCwIcon className="size-4" />
-              I’ve chosen repositories — check again
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => void api.logout().finally(() => window.location.reload())}
-            >
-              <LogOutIcon className="size-4" />
-              Sign out
-            </Button>
-          </div>
-        </div>
-      </section>
-    </div>,
-    document.body,
-  );
-}
-
-function OnboardingStep({ number, text }: { number: string; text: string }) {
   return (
-    <li className="flex gap-3">
-      <span className="grid size-5 shrink-0 place-items-center rounded-full border border-border font-mono text-[10px] text-muted-foreground">
-        {number}
-      </span>
-      <span className="leading-5">{text}</span>
-    </li>
+    <section
+      aria-labelledby="access-onboarding-title"
+      className="pointer-events-auto fixed inset-x-0 top-14 z-40 mx-auto w-[min(44rem,calc(100vw-2rem))] rounded-2xl border border-border bg-background/95 p-5 shadow-xl shadow-black/10 backdrop-blur md:left-[calc(var(--nav-width,252px)+1rem)] md:right-4 md:mx-0 md:w-auto"
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 id="access-onboarding-title" className="text-base font-medium">
+            You&apos;re signed in, {state.login}.
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            You don&apos;t have access to any repository or agent yet. Pick the path that
+            matches your role.
+          </p>
+        </div>
+        <button
+          type="button"
+          aria-label="Dismiss for now"
+          className="rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+          onClick={() => {
+            window.sessionStorage.setItem(DISMISSED_KEY, "1");
+            setDismissed(true);
+          }}
+        >
+          <XIcon className="size-4" />
+        </button>
+      </div>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <div className="rounded-xl border border-border bg-card p-4">
+          <h3 className="flex items-center gap-2 text-sm font-medium">
+            <KeyRoundIcon className="size-4" />I write code
+          </h3>
+          <p className="mt-1.5 text-xs leading-5 text-muted-foreground">
+            Add a GitHub personal access token. Commits and pull requests will be authored as
+            you.
+          </p>
+          <Link
+            href="/settings"
+            className="mt-3 inline-flex h-8 items-center gap-1.5 rounded-lg bg-primary px-2.5 text-sm font-medium text-primary-foreground transition-colors outline-none hover:bg-primary/80 focus-visible:ring-3 focus-visible:ring-ring/50"
+          >
+            Add token in Settings
+          </Link>
+        </div>
+        <div className="rounded-xl border border-border bg-card p-4">
+          <h3 className="flex items-center gap-2 text-sm font-medium">
+            <UsersIcon className="size-4" />
+            I&apos;m product or QA
+          </h3>
+          <p className="mt-1.5 text-xs leading-5 text-muted-foreground">
+            An operator assigns you a team agent that already knows which repositories to use.
+          </p>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="mt-3"
+            onClick={() =>
+              void navigator.clipboard.writeText(requestMessage).then(() => {
+                setCopied(true);
+                window.setTimeout(() => setCopied(false), 2000);
+              })
+            }
+          >
+            <ClipboardCopyIcon className="size-3.5" />
+            {copied ? "Copied" : "Copy request message"}
+          </Button>
+        </div>
+      </div>
+    </section>
   );
 }
