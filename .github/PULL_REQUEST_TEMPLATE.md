@@ -15,14 +15,14 @@ Closes #
 
 ## Does this cross a line that needs a decision?
 
-Tick anything that applies. None of these block the PR, they just mean a maintainer should weigh in before merge. See [CONTRIBUTING.md](../blob/main/CONTRIBUTING.md).
+Tick anything that applies. None of these block the PR, they just mean a maintainer should weigh in before merge. See [CONTRIBUTING.md](../CONTRIBUTING.md).
 
 - [ ] adds or widens a contract in `packages/protocol`
 - [ ] adds a dependency to `packages/runtime`, or otherwise moves the trust boundary
 - [ ] gives the controller knowledge of a specific profile or provider
 - [ ] adds a dependency, a provider, or a service
 - [ ] changes `db/schema.ts` (a generated migration is committed)
-- [ ] changes anything in [docs/secrets.md](../blob/main/docs/secrets.md)'s scope
+- [ ] changes anything in [docs/secrets.md](../docs/secrets.md)'s scope
 
 ## Docs
 

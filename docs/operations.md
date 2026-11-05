@@ -216,6 +216,20 @@ For E2B, select `SANDBOX_PROVIDER=e2b` and use `pnpm sandbox:template`.
 
 Create runs from the dashboard after signing in with GitHub. Direct operator API calls must include the authenticated browser session cookie; unauthenticated requests intentionally return `401`.
 
+## Repository credentials
+
+Signing in grants no repository access. A task's primary repository must be writable by a credential the user owns, resolved in this order (see [secrets.md](secrets.md)): the user's GitHub App sign-in where the App is installed, their personal access token, and — for read access only — a read-only platform credential.
+
+**Developers** add a personal access token under Settings → GitHub account. A classic token with `repo` and `workflow` works immediately; fine-grained tokens are narrower but need the organization owner's approval, and Settings shows *Waiting for approval* until GitHub lets the token see a private repository. The token must belong to the signed-in account.
+
+**Operators** (`OPERATOR_GITHUB_LOGINS`, reachable from the account menu → *Admin · Credentials*) add one platform token per organization that has no App installation:
+
+1. Create a fine-grained token on a machine account or your own: resource owner = the organization, only the repositories agents need, Contents **read-only**, Metadata read-only. Choose the longest expiry; regenerating resets it to 30 days.
+2. Paste it under Admin → Credentials. Saving probes every private repository the token can see with git's `info/refs` handshake and records read or write per repository. A repository the token can push to is labelled `write` and is never lent out for read-only work.
+3. Re-probe after changing the token's repositories on GitHub; replace it before it expires (the card turns amber 14 days ahead).
+
+Organizations where the GitHub App is installed need no platform credential: users read and write there with their own sign-in.
+
 ## Plugins marketplace
 
 Operators listed in `OPERATOR_GITHUB_LOGINS` can seed `marketplace/plugins` and manage review/install modes. Any signed-in user can install plugins and configure variables from the **Plugins** page.

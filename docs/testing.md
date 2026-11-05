@@ -41,6 +41,10 @@ Integration tests share one database and truncate between tests, so they run in 
 | `apps/controller/db/sessions.integration.test.ts` | one workspace owner, ordered queued turns, promotion, checkpoint ownership, and workspace parking |
 | `apps/controller/reconcile/reconciler.integration.test.ts` | restart safety, checkpoint replacement/expiry, workspace suspend/resume, and cold fallback |
 | `apps/controller/http/api.integration.test.ts` | the HTTP contract, including authenticated checkpoint callbacks and session turns |
+| `packages/vcs/github-token.test.ts` | a token's identity, scopes and expiry come from `GET /user`; read or write comes from git's `info/refs` handshake, not REST |
+| `apps/controller/http/personal-token.integration.test.ts` | a personal token must belong to the signed-in account; status never echoes the token; a rejected token reads as invalid |
+| `apps/controller/http/admin.integration.test.ts` | operators only; a platform credential records what git allowed per private repository |
+| `apps/controller/vcs/repository-access.integration.test.ts` | credential order; a rejected personal token fails instead of falling back; a writable platform credential is never used for read; runs carry the user as git author |
 | `apps/controller/integrations/github.test.ts` | webhook HMAC verification, event/action filtering, and exact PR head projection |
 | `apps/controller/db/integrations.integration.test.ts` | delivery idempotency, leases, and guarded completion |
 | `apps/web/lib/foldActivityEvents.test.ts` | completed-turn thinking renders as one Thought block, including legacy per-word logs |

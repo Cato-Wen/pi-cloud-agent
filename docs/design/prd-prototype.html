@@ -1,0 +1,1130 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>zen8agent · 仓库访问 / Agent / Skill 高保真原型</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-sans/style.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-mono/style.css" />
+<style>
+  :root {
+    --background:#fff; --foreground:#2f2f2f; --card:#fff; --popover:#fff; --primary:#2f2f2f; --primary-foreground:#fafafa;
+    --secondary:#f1f1f2; --muted:#f7f7f8; --muted-foreground:#737373; --accent:#e9e9eb; --destructive:#dc2626;
+    --border:#e5e5e7; --input:#d9d9dc; --ring:#a3a3a3; --sidebar:#f7f7f8; --composer:#f7f7f8; --radius:.5rem;
+    --link:#2563eb; --brand:#ff9b26; --ok:#059669; --warn:#a16207; --info:#0284c7; --run:#2563eb;
+    --note:#7c3aed;
+  }
+  * { box-sizing:border-box; border-color:var(--border); }
+  html,body { margin:0; height:100%; background:#ececee; color:var(--foreground); font-family:"Geist Sans","Geist","PingFang SC","Microsoft YaHei",ui-sans-serif,system-ui,sans-serif; font-size:14px; -webkit-font-smoothing:antialiased; }
+  code,.mono { font-family:"Geist Mono",ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12.5px; }
+  a { color:var(--link); text-decoration:none; }
+  button { font:inherit; color:inherit; cursor:pointer; }
+  ::selection { background:color-mix(in oklab,var(--brand) 32%,transparent); }
+
+  /* ---------- 原型外壳 ---------- */
+  .proto { display:grid; grid-template-rows:48px minmax(0,1fr); height:100dvh; }
+  .proto-bar { display:flex; align-items:center; gap:10px; padding:0 16px; background:#1d1d1f; color:#e8e8e8; font-size:12.5px; overflow-x:auto; }
+  .proto-bar .title { font-weight:600; letter-spacing:-.01em; white-space:nowrap; margin-right:8px; }
+  .proto-bar .title b { color:var(--brand); }
+  .proto-bar .nav { display:flex; gap:4px; }
+  .proto-bar .nav button { border:1px solid transparent; background:transparent; color:#bdbdbd; padding:5px 9px; border-radius:6px; white-space:nowrap; font-size:12px; }
+  .proto-bar .nav button:hover { background:#2c2c2e; color:#fff; }
+  .proto-bar .nav button.active { background:#fff; color:#1d1d1f; font-weight:500; }
+  .proto-bar .nav .group { color:#6f6f73; padding:5px 4px 5px 10px; font-size:11px; letter-spacing:.06em; white-space:nowrap; }
+  .proto-bar .roles button.active { background:var(--brand); color:#1d1d1f; }
+  .proto-bar .nav button .step { opacity:.55; margin-right:4px; }
+  .proto-bar .spacer { flex:1; }
+  .proto-bar label.toggle { display:flex; gap:6px; align-items:center; color:#bdbdbd; white-space:nowrap; cursor:pointer; }
+  .proto-bar kbd { background:#2c2c2e; border:1px solid #444; border-radius:4px; padding:0 5px; font-family:inherit; font-size:11px; }
+  .role-banner { position:absolute; left:50%; transform:translateX(-50%); top:-1px; z-index:45; background:#1d1d1f; color:#fff; font-size:11px; padding:3px 10px; border-radius:0 0 8px 8px; letter-spacing:.02em; }
+  .role-banner b { color:var(--brand); }
+
+  .stage { display:grid; grid-template-columns:minmax(0,1fr) 360px; min-height:0; }
+  .stage.no-notes { grid-template-columns:minmax(0,1fr) 0; }
+  .stage.no-notes .notes { display:none; }
+  .frame-wrap { min-height:0; overflow:auto; padding:18px; }
+  .frame { position:relative; width:1180px; height:760px; margin:0 auto; background:var(--background); border-radius:12px; box-shadow:0 1px 2px rgba(0,0,0,.08),0 24px 48px -24px rgba(0,0,0,.35); overflow:hidden; display:grid; grid-template-columns:252px minmax(0,1fr); }
+
+  .notes { border-left:1px solid #d7d7da; background:#fafafa; overflow:auto; padding:18px 18px 40px; font-size:13px; line-height:1.55; }
+  .notes h3 { margin:0 0 4px; font-size:14px; letter-spacing:-.01em; }
+  .notes .route { color:var(--muted-foreground); font-family:"Geist Mono",monospace; font-size:11.5px; margin-bottom:14px; }
+  .notes ol { padding-left:0; margin:0; list-style:none; }
+  .notes li { display:grid; grid-template-columns:22px 1fr; gap:8px; padding:8px 0; border-top:1px solid #e9e9ea; }
+  .notes li .n { width:20px; height:20px; border-radius:999px; background:var(--note); color:#fff; font-size:11px; font-weight:600; display:grid; place-items:center; margin-top:1px; }
+  .notes li b { display:block; margin-bottom:2px; }
+  .notes .sec { margin-top:18px; font-size:11px; letter-spacing:.08em; color:var(--muted-foreground); }
+  .notes .states { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+  .notes .states button { font-size:12px; padding:4px 8px; border:1px solid var(--border); border-radius:6px; background:#fff; }
+  .notes .states button.active { background:var(--primary); color:#fff; border-color:var(--primary); }
+
+  .mark { position:absolute; z-index:40; width:20px; height:20px; border-radius:999px; background:var(--note); color:#fff; font-size:11px; font-weight:600; display:grid; place-items:center; box-shadow:0 0 0 3px rgba(124,58,237,.18); pointer-events:none; }
+  .proto.hide-marks .mark { display:none; }
+
+  /* ---------- 应用外观（对应 apps/web） ---------- */
+  .side-nav { background:var(--sidebar); border-right:1px solid var(--border); display:flex; flex-direction:column; min-height:0; }
+  .brand { display:flex; align-items:center; gap:8px; padding:16px 14px 8px; font-size:13px; font-weight:600; letter-spacing:-.01em; }
+  .brand .logo { width:26px; height:26px; border-radius:8px; border:1px solid var(--border); background:#fff; display:grid; place-items:center; }
+  .brand .logo i { width:12px; height:12px; border-radius:3px; background:linear-gradient(135deg,var(--brand),#ff6a00); display:block; }
+  .mode-switch { margin:4px 10px 0; display:flex; padding:2px; border-radius:8px; background:var(--accent); font-size:12px; }
+  .mode-switch span { flex:1; text-align:center; padding:5px 0; border-radius:6px; color:var(--muted-foreground); }
+  .mode-switch span.on { background:#fff; color:var(--foreground); box-shadow:0 1px 1px rgba(0,0,0,.06); }
+  .history-link { margin:10px 10px 0; display:flex; align-items:center; gap:7px; padding:7px 10px; border-radius:8px; font-size:13px; color:var(--foreground); border:1px solid var(--border); background:#fff; }
+  .history-link.active { background:var(--accent); border-color:transparent; }
+  .nav-sec { padding:16px 14px 4px; font-size:11px; color:var(--muted-foreground); letter-spacing:.06em; }
+  .nav-item { display:flex; align-items:center; gap:8px; margin:0 10px; padding:7px 10px; border-radius:8px; font-size:13px; color:var(--foreground); }
+  .nav-item.is-active { background:var(--accent); }
+  .nav-item .dot { width:7px; height:7px; border-radius:99px; background:var(--run); animation:pulse 1.4s ease-in-out infinite; }
+  .nav-item .meta { margin-left:auto; color:var(--muted-foreground); font-size:11.5px; }
+  .nav-item .tag { font-size:10.5px; padding:1px 6px; border-radius:99px; background:#fff; border:1px solid var(--border); color:var(--muted-foreground); }
+  .nav-bottom { margin-top:auto; border-top:1px solid var(--border); padding:10px 14px; display:flex; align-items:center; gap:8px; font-size:13px; }
+  .avatar { width:24px; height:24px; border-radius:99px; background:conic-gradient(from 90deg,#ffb561,#ff7a1a,#ffb561); }
+  .nav-bottom .cog { margin-left:auto; color:var(--muted-foreground); }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.28} }
+
+  .main { min-width:0; min-height:0; display:flex; flex-direction:column; background:var(--background); position:relative; }
+  .app-header { height:48px; display:flex; align-items:center; gap:10px; padding:0 16px; border-bottom:1px solid var(--border); font-size:13px; font-weight:500; }
+  .app-header .crumb { color:var(--muted-foreground); font-weight:400; }
+  .content { min-height:0; flex:1; overflow:auto; }
+  .center { display:grid; place-items:center; height:100%; padding:40px 32px; }
+  .narrow { width:100%; max-width:720px; }
+  .wide { max-width:860px; margin:0 auto; padding:32px 36px 60px; }
+  h1.title { font-size:20px; font-weight:500; letter-spacing:-.02em; margin:0 0 6px; }
+  h2.h { font-size:20px; font-weight:500; letter-spacing:-.02em; margin:0; }
+  p.sub { margin:6px 0 0; color:var(--muted-foreground); font-size:13.5px; }
+  .section { margin-top:36px; }
+  .section:first-child { margin-top:0; }
+
+  /* 输入框 */
+  .composer { position:relative; border:1px solid var(--border); background:var(--composer); border-radius:16px; padding:14px 14px 10px; box-shadow:0 1px 2px rgba(0,0,0,.03); }
+  .composer .ta { width:100%; min-height:48px; font-size:14px; color:var(--foreground); }
+  .composer .ta .ph { color:#9a9a9f; }
+  .composer-foot { display:flex; align-items:center; gap:6px; margin-top:8px; }
+  .pill { display:inline-flex; align-items:center; gap:6px; height:28px; padding:0 9px; border-radius:8px; font-size:12.5px; color:var(--foreground); background:transparent; border:1px solid transparent; }
+  .pill:hover { background:var(--accent); }
+  .pill.muted { color:var(--muted-foreground); }
+  .pill .ic { width:14px; height:14px; display:inline-block; border-radius:3px; border:1.5px solid currentColor; opacity:.75; }
+  .pill .caret { width:0; height:0; border-left:4px solid transparent; border-right:4px solid transparent; border-top:5px solid currentColor; opacity:.6; }
+  .send { margin-left:auto; width:30px; height:30px; border-radius:99px; border:0; background:var(--primary); color:#fff; display:grid; place-items:center; }
+  .send.off { background:#d4d4d8; }
+  .send svg { width:14px; height:14px; }
+  .hint { margin-top:10px; font-size:12.5px; color:var(--muted-foreground); text-align:center; }
+
+  /* 弹层 / 下拉 */
+  .popover { position:absolute; z-index:30; background:var(--popover); border:1px solid var(--border); border-radius:10px; box-shadow:0 10px 30px -10px rgba(0,0,0,.25),0 2px 6px rgba(0,0,0,.06); padding:6px; min-width:300px; font-size:13px; }
+  .popover .ghead { padding:8px 10px 4px; font-size:11px; color:var(--muted-foreground); letter-spacing:.06em; }
+  .popover .item { display:flex; align-items:center; gap:9px; padding:7px 10px; border-radius:7px; }
+  .popover .item:hover, .popover .item.hl { background:var(--accent); }
+  .popover .item .ck { margin-left:auto; color:var(--foreground); font-size:12px; }
+  .popover .item .desc { color:var(--muted-foreground); font-size:12px; margin-left:auto; }
+  .popover .item .ico { width:16px; height:16px; border-radius:4px; display:grid; place-items:center; font-size:10px; }
+  .popover .sep { height:1px; background:var(--border); margin:6px 4px; }
+  .ico.agent { background:#fff1e3; color:#c2410c; border:1px solid #ffd7b0; }
+  .ico.repo { background:var(--secondary); color:#555; border:1px solid var(--border); }
+  .popover .search { display:flex; align-items:center; gap:8px; padding:6px 10px 8px; border-bottom:1px solid var(--border); margin-bottom:4px; color:var(--muted-foreground); }
+
+  .badge { display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:500; padding:1px 7px; border-radius:99px; border:1px solid; line-height:16px; white-space:nowrap; }
+  .badge.read { color:#525252; background:#f4f4f5; border-color:#e4e4e7; }
+  .badge.write { color:#065f46; background:#ecfdf5; border-color:#a7f3d0; }
+  .badge.primary { color:#1d4ed8; background:#eff6ff; border-color:#bfdbfe; }
+  .badge.ctx { color:#6b7280; background:#f9fafb; border-color:#e5e7eb; }
+  .badge.ok { color:#065f46; background:#ecfdf5; border-color:#a7f3d0; }
+  .badge.warn { color:#92400e; background:#fffbeb; border-color:#fde68a; }
+  .badge.err { color:#991b1b; background:#fef2f2; border-color:#fecaca; }
+  .badge.team { color:#5b21b6; background:#f5f3ff; border-color:#ddd6fe; }
+  .badge.plat { color:#1f2937; background:#f3f4f6; border-color:#d1d5db; }
+  .badge.mine { color:#9a3412; background:#fff7ed; border-color:#fed7aa; }
+
+  .chips { display:flex; flex-wrap:wrap; gap:6px; }
+  .chip { display:inline-flex; align-items:center; gap:6px; height:26px; padding:0 9px; border-radius:8px; border:1px solid var(--border); background:#fff; font-size:12.5px; }
+  .chip .x { color:var(--muted-foreground); font-size:12px; }
+  .chip.add { border-style:dashed; color:var(--muted-foreground); }
+
+  /* 卡片与表单 */
+  .card { border:1px solid var(--border); background:var(--card); border-radius:12px; padding:16px; }
+  .card + .card { margin-top:12px; }
+  .row { display:flex; align-items:center; gap:12px; }
+  .row.top { align-items:flex-start; }
+  .grow { flex:1; min-width:0; }
+  .lbl { font-size:12.5px; color:var(--muted-foreground); margin-bottom:6px; display:block; }
+  .input { width:100%; height:34px; border:1px solid var(--input); border-radius:8px; padding:0 10px; font:inherit; font-size:13px; background:#fff; color:var(--foreground); }
+  .input.mono { font-family:"Geist Mono",monospace; font-size:12.5px; }
+  .textarea { width:100%; min-height:120px; border:1px solid var(--input); border-radius:8px; padding:9px 10px; font:inherit; font-size:13px; background:#fff; resize:vertical; line-height:1.5; }
+  .select { display:inline-flex; align-items:center; gap:8px; height:30px; padding:0 9px; border:1px solid var(--input); border-radius:8px; background:#fff; font-size:12.5px; }
+  .btn { display:inline-flex; align-items:center; gap:6px; height:32px; padding:0 12px; border-radius:8px; border:1px solid var(--border); background:#fff; font-size:13px; font-weight:500; white-space:nowrap; }
+  .btn:hover { background:var(--muted); }
+  .btn.primary { background:var(--primary); color:#fff; border-color:var(--primary); }
+  .btn.primary:hover { background:#000; }
+  .btn.danger { color:var(--destructive); }
+  .btn.sm { height:28px; padding:0 9px; font-size:12.5px; }
+  .btn.ghost { border-color:transparent; }
+  .icon-sq { width:40px; height:40px; border-radius:10px; background:var(--muted); display:grid; place-items:center; flex:none; }
+  .kv { font-size:12.5px; color:var(--muted-foreground); }
+  .kv b { color:var(--foreground); font-weight:500; }
+  .divider { height:1px; background:var(--border); margin:14px 0; }
+  .tabs { display:flex; gap:2px; border-bottom:1px solid var(--border); margin-bottom:24px; }
+  .tabs span { padding:8px 12px; font-size:13px; color:var(--muted-foreground); border-bottom:2px solid transparent; margin-bottom:-1px; }
+  .tabs span.on { color:var(--foreground); border-color:var(--foreground); font-weight:500; }
+  .table { width:100%; border-collapse:collapse; font-size:13px; }
+  .table th { text-align:left; font-weight:500; color:var(--muted-foreground); font-size:12px; padding:8px 10px; border-bottom:1px solid var(--border); }
+  .table td { padding:10px; border-bottom:1px solid var(--border); vertical-align:middle; }
+  .table tr:last-child td { border-bottom:0; }
+  .table .act { text-align:right; white-space:nowrap; }
+  .callout { border:1px solid; border-radius:10px; padding:10px 12px; font-size:12.5px; line-height:1.5; }
+  .callout.info { background:#f0f9ff; border-color:#bae6fd; color:#075985; }
+  .callout.warn { background:#fffbeb; border-color:#fde68a; color:#92400e; }
+  .callout.err { background:#fef2f2; border-color:#fecaca; color:#991b1b; }
+  details.guide { margin-top:12px; font-size:12.5px; color:var(--muted-foreground); }
+  details.guide summary { cursor:pointer; color:var(--foreground); }
+  details.guide ol { margin:8px 0 0; padding-left:18px; line-height:1.6; }
+  .check { display:flex; align-items:center; gap:8px; padding:7px 0; font-size:13px; }
+  .check input { accent-color:var(--foreground); }
+  .list-item { display:flex; align-items:center; gap:12px; padding:12px 14px; border:1px solid var(--border); border-radius:10px; background:#fff; }
+  .list-item + .list-item { margin-top:8px; }
+  .list-item.sel { border-color:var(--foreground); box-shadow:0 0 0 1px var(--foreground); }
+
+  /* 会话页 */
+  .session { display:grid; grid-template-columns:minmax(0,1fr) 320px; min-height:0; flex:1; }
+  .chat { min-width:0; display:flex; flex-direction:column; min-height:0; }
+  .msgs { flex:1; overflow:auto; padding:22px 28px; display:flex; flex-direction:column; gap:16px; }
+  .msg.user { align-self:flex-end; max-width:70%; background:var(--secondary); border-radius:14px; padding:10px 14px; font-size:13.5px; }
+  .msg.agent { max-width:78%; font-size:13.5px; line-height:1.6; }
+  .msg.agent code { background:var(--muted); padding:1px 5px; border-radius:4px; }
+  .tool { display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--muted-foreground); padding:6px 10px; border:1px solid var(--border); border-radius:8px; background:var(--muted); width:fit-content; }
+  .tool .ok { color:var(--ok); }
+  .diff { border-left:1px solid var(--border); display:flex; flex-direction:column; min-height:0; }
+  .diff-tabs { display:flex; border-bottom:1px solid var(--border); font-size:12.5px; }
+  .diff-tabs span { padding:10px 12px; color:var(--muted-foreground); border-bottom:2px solid transparent; margin-bottom:-1px; display:flex; align-items:center; gap:6px; }
+  .diff-tabs span.on { color:var(--foreground); border-color:var(--foreground); }
+  .diff-tabs .cnt { font-size:10.5px; padding:0 5px; border-radius:99px; background:var(--accent); }
+  .file { display:flex; align-items:center; gap:8px; padding:8px 12px; font-family:"Geist Mono",monospace; font-size:11.5px; border-bottom:1px solid var(--border); }
+  .file .plus { color:var(--ok); margin-left:auto; } .file .minus { color:var(--destructive); }
+  .ws-bar { display:flex; align-items:center; gap:6px; padding:8px 16px; border-bottom:1px solid var(--border); font-size:12px; color:var(--muted-foreground); overflow:auto; }
+  .ws-bar .chip { height:24px; font-size:12px; }
+
+  .screen { display:none; grid-column:1 / -1; grid-template-columns:252px minmax(0,1fr); min-height:0; height:100%; }
+  .screen.on { display:grid; }
+
+  .empty { text-align:center; color:var(--muted-foreground); padding:40px 20px; border:1px dashed var(--border); border-radius:12px; font-size:13px; }
+  .onboard { border:1px solid var(--border); border-radius:14px; padding:18px 20px; background:linear-gradient(180deg,#fff,#fbfbfc); }
+  .onboard .two { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:14px; }
+  .onboard .opt { border:1px solid var(--border); border-radius:10px; padding:14px; background:#fff; }
+  .onboard .opt h4 { margin:0 0 6px; font-size:13.5px; }
+  .onboard .opt p { margin:0 0 10px; font-size:12.5px; color:var(--muted-foreground); line-height:1.5; }
+  .slash-hl { background:#fff1e3; border-radius:4px; padding:0 2px; }
+
+  /* 提示图标 + 悬浮说明 */
+  .tip { position:relative; display:inline-grid; place-items:center; width:16px; height:16px; border-radius:99px; border:1px solid var(--muted-foreground); color:var(--muted-foreground); font-size:10px; font-weight:600; margin-left:6px; vertical-align:middle; cursor:default; }
+  .tip .tt { display:none; position:absolute; left:22px; top:-8px; z-index:50; width:360px; background:#1d1d1f; color:#f2f2f2; font-size:12px; font-weight:400; line-height:1.55; padding:10px 12px; border-radius:8px; box-shadow:0 10px 30px -10px rgba(0,0,0,.4); }
+  .tip:hover .tt, .tip.open .tt { display:block; }
+  .tabs span[data-go] { cursor:pointer; }
+  .tabs span[data-go]:hover { color:var(--foreground); }
+
+  /* 工作区栏：不换行 */
+  .ws-bar { flex-wrap:nowrap; white-space:nowrap; }
+  .ws-bar .chip { white-space:nowrap; flex:none; }
+
+  /* 树状结构（改动侧栏 / 工作区卡片） */
+  .tree { font-size:12.5px; }
+  .tree .node { display:flex; align-items:center; gap:7px; padding:7px 12px; border-bottom:1px solid var(--border); }
+  .tree .node.repo { font-weight:500; background:var(--muted); }
+  .tree .node.repo .tw { color:var(--muted-foreground); font-size:10px; width:10px; }
+  .tree .node.file { padding-left:30px; font-family:"Geist Mono",monospace; font-size:11.5px; font-weight:400; }
+  .tree .node .cnt { font-size:10.5px; padding:0 5px; border-radius:99px; background:var(--accent); color:var(--muted-foreground); }
+  .tree .node .plus { color:var(--ok); margin-left:auto; } .tree .node .minus { color:var(--destructive); }
+  .tree .node .r { margin-left:auto; display:flex; gap:6px; align-items:center; }
+  .tree.card-tree .node { border:0; padding:5px 0; }
+  .tree.card-tree .node.repo { background:transparent; font-weight:400; }
+  .tree.card-tree .node.file { padding-left:22px; font-family:inherit; font-size:12.5px; }
+  .tree .ro { color:var(--muted-foreground); font-size:11.5px; }
+</style>
+</head>
+<body>
+<div class="proto" id="proto">
+  <div class="proto-bar">
+    <span class="title"><b>zen8agent</b> 原型</span>
+    <div class="nav roles" id="roles"></div>
+    <span style="color:#444">|</span>
+    <div class="nav" id="nav"></div>
+    <span class="spacer"></span>
+    <label class="toggle"><input type="checkbox" id="marksToggle" checked /> 标注</label>
+    <label class="toggle"><input type="checkbox" id="notesToggle" checked /> 说明面板</label>
+    <span style="color:#6f6f73"><kbd>←</kbd> <kbd>→</kbd> 切换页面</span>
+  </div>
+
+  <div class="stage" id="stage">
+    <div class="frame-wrap"><div class="frame" id="frame">
+
+      <!-- ===================== S1 新建任务 · 下拉框 ===================== -->
+      <section class="screen" data-id="s1" data-title="新建任务 · 选择 agent 或仓库" data-group="开发">
+        <aside class="side-nav">
+          <div class="brand"><span class="logo"><i></i></span>zen8agent</div>
+          <div class="mode-switch"><span class="on">任务</span><span>评审</span></div>
+          <a class="history-link active">＋ 新建任务</a>
+          <div class="nav-sec">进行中</div>
+          <div class="nav-item"><span class="dot"></span>整理 cookbook 需求变更 <span class="meta">2 分钟</span></div>
+          <div class="nav-sec">最近</div>
+          <div class="nav-item">MD-18845 pack size 校验 <span class="tag">仓库</span></div>
+          <div class="nav-item">回归用例：hot hold <span class="tag">agent</span></div>
+          <div class="nav-bottom"><span class="avatar"></span>Cato-Wen<span class="cog">⚙</span></div>
+        </aside>
+        <div class="main">
+          <div class="app-header">新建任务</div>
+          <div class="content"><div class="center"><div class="narrow">
+            <h1 class="title" style="text-align:center;margin-bottom:22px">今天要做什么？</h1>
+            <div class="composer">
+              <div class="ta"><span class="ph">描述要让 Pi 完成的任务…</span></div>
+              <div class="composer-foot">
+                <button class="pill" data-toggle="pop-target"><span class="ic"></span>选择 agent 或仓库 <span class="caret"></span></button>
+                <button class="pill muted" disabled>⑂ 分支 <span class="caret"></span></button>
+                <button class="pill">模型 <span class="caret"></span></button>
+                <button class="pill muted">思考：关 <span class="caret"></span></button>
+                <button class="send off"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
+              </div>
+              <div class="popover" id="pop-target" style="left:10px;top:92px;width:420px">
+                <div class="search">⌕ <span style="color:#9a9a9f">搜索 agent 或仓库…</span></div>
+                <div class="ghead">Agent · 分配给我的</div>
+                <div class="item hl"><span class="ico agent">A</span>cookbook-PM-agent <span class="desc">cookbook 团队</span></div>
+                <div class="item"><span class="ico agent">A</span>cookbook-testing-agent <span class="desc">cookbook 团队</span></div>
+                <div class="sep"></div>
+                <div class="ghead">仓库 · 我的 token 可写的</div>
+                <div class="item"><span class="ico repo">R</span>food-truck/master-data-management</div>
+                <div class="item"><span class="ico repo">R</span>ct-kb/team-cookbook-feature</div>
+                <div class="item"><span class="ico repo">R</span>ct-kb/team-cookbook-kb</div>
+                <div class="item" style="color:var(--muted-foreground)"><span class="ico repo">R</span>Cato-Wen/agent-config <span class="desc">个人仓库</span></div>
+              </div>
+            </div>
+            <p class="hint">产品 / 测试选 agent，开发选仓库。</p>
+          </div></div></div>
+          <span class="mark" style="left:274px;top:344px">1</span>
+          <span class="mark" style="left:274px;top:420px">2</span>
+          <span class="mark" style="left:274px;top:520px">3</span>
+          <span class="mark" style="left:716px;top:300px">4</span>
+        </div>
+      </section>
+
+      <!-- ===================== S1-PM 新建任务 · 产品视角 ===================== -->
+      <section class="screen" data-id="s1pm" data-title="新建任务 · 产品/测试看到的下拉框" data-group="产品">
+        <aside class="side-nav">
+          <div class="brand"><span class="logo"><i></i></span>zen8agent</div>
+          <div class="mode-switch"><span class="on">任务</span><span>评审</span></div>
+          <a class="history-link active">＋ 新建任务</a>
+          <div class="nav-sec">最近</div>
+          <div class="nav-item">把 MD-18901 整理成 PRD <span class="tag">agent</span></div>
+          <div class="nav-item">对比需求与现有实现 <span class="tag">agent</span></div>
+          <div class="nav-bottom"><span class="avatar"></span>lisazheng-xm<span class="cog">⚙</span></div>
+        </aside>
+        <div class="main">
+          <div class="app-header">新建任务</div>
+          <div class="content"><div class="center"><div class="narrow">
+            <h1 class="title" style="text-align:center;margin-bottom:22px">今天要做什么？</h1>
+            <div class="composer">
+              <div class="ta"><span class="ph">描述要让 Pi 完成的任务…</span></div>
+              <div class="composer-foot">
+                <button class="pill"><span class="ic"></span>选择 agent <span class="caret"></span></button>
+                <button class="pill">模型 <span class="caret"></span></button>
+                <button class="pill muted">思考：关 <span class="caret"></span></button>
+                <button class="send off"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
+              </div>
+              <div class="popover" style="left:10px;top:92px;width:420px">
+                <div class="ghead">Agent · 分配给我的</div>
+                <div class="item hl"><span class="ico agent">A</span>cookbook-PM-agent <span class="desc">cookbook 团队</span></div>
+                <div class="sep"></div>
+                <div class="ghead">仓库</div>
+                <div class="item" style="color:var(--muted-foreground);cursor:default">还没有个人 token。写代码的话请<a style="margin:0 2px">到设置里添加</a>。</div>
+              </div>
+            </div>
+            <p class="hint">agent 已经知道该用哪些仓库，直接描述任务即可。</p>
+          </div></div></div>
+          <span class="mark" style="left:274px;top:344px">1</span>
+          <span class="mark" style="left:274px;top:430px">2</span>
+          <span class="mark" style="left:246px;top:150px">3</span>
+        </div>
+      </section>
+
+      <!-- ===================== S2 新建任务 · 开发模式 ===================== -->
+      <section class="screen" data-id="s2" data-title="新建任务 · 开发模式" data-group="开发">
+        <aside class="side-nav">
+          <div class="brand"><span class="logo"><i></i></span>zen8agent</div>
+          <div class="mode-switch"><span class="on">任务</span><span>评审</span></div>
+          <a class="history-link active">＋ 新建任务</a>
+          <div class="nav-sec">最近</div>
+          <div class="nav-item">MD-18845 pack size 校验 <span class="tag">仓库</span></div>
+          <div class="nav-item">回归用例：hot hold <span class="tag">agent</span></div>
+          <div class="nav-bottom"><span class="avatar"></span>Cato-Wen<span class="cog">⚙</span></div>
+        </aside>
+        <div class="main">
+          <div class="app-header">新建任务</div>
+          <div class="content"><div class="center"><div class="narrow">
+            <h1 class="title" style="text-align:center;margin-bottom:22px">今天要做什么？</h1>
+            <div class="composer">
+              <div class="ta">MD-18901：pack size 为 0 时跳过 ERP 同步。先看 team-cookbook-feature 里的需求描述，再在代码里实现并补单测。</div>
+              <div class="composer-foot">
+                <button class="pill"><span class="ico repo" style="width:14px;height:14px;font-size:9px">R</span>food-truck/master-data-management <span class="caret"></span></button>
+                <button class="pill">⑂ develop <span class="caret"></span></button>
+                <button class="pill">claude-opus-5-5 <span class="caret"></span></button>
+                <button class="pill muted">思考：中 <span class="caret"></span></button>
+                <button class="pill" data-toggle="pop-ctx" style="margin-left:auto">📎 上下文仓库 <span class="badge read" style="margin-left:2px">2</span> <span class="caret"></span></button>
+                <button class="send" style="margin-left:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
+              </div>
+              <div class="popover" id="pop-ctx" style="right:10px;left:auto;top:96px;width:400px">
+                <div class="ghead">上下文仓库 · 只读，和主仓库一起 clone 进沙箱</div>
+                <div class="item"><span class="ico repo">R</span>ct-kb/team-cookbook-feature <span class="ck">✓</span></div>
+                <div class="item"><span class="ico repo">R</span>ct-kb/team-cookbook-kb <span class="ck">✓</span></div>
+                <div class="item"><span class="ico repo">R</span>ct-kb/cookbook-test-cases</div>
+                <div class="item"><span class="ico repo">R</span>chancetop-com/core-ai</div>
+                <div class="sep"></div>
+                <div class="search" style="border:0;margin:0;padding-bottom:4px">⌕ <span style="color:#9a9a9f">搜索我能读的仓库…</span></div>
+              </div>
+            </div>
+            <p class="hint">commit 和 PR 将以 <b>Cato-Wen</b> 的身份提交（使用你的个人 token）。</p>
+          </div></div></div>
+          <span class="mark" style="left:246px;top:398px">1</span>
+          <span class="mark" style="left:1000px;top:398px">2</span>
+          <span class="mark" style="left:600px;top:470px">3</span>
+        </div>
+      </section>
+
+      <!-- ===================== S3 新建任务 · agent 模式 + / 命令 ===================== -->
+      <section class="screen" data-id="s3" data-title="新建任务 · Agent 模式 + / 命令" data-group="产品">
+        <aside class="side-nav">
+          <div class="brand"><span class="logo"><i></i></span>zen8agent</div>
+          <div class="mode-switch"><span class="on">任务</span><span>评审</span></div>
+          <a class="history-link active">＋ 新建任务</a>
+          <div class="nav-sec">最近</div>
+          <div class="nav-item">回归用例：hot hold <span class="tag">agent</span></div>
+          <div class="nav-bottom"><span class="avatar"></span>lisazheng-xm<span class="cog">⚙</span></div>
+        </aside>
+        <div class="main">
+          <div class="app-header">新建任务</div>
+          <div class="content"><div class="center"><div class="narrow">
+            <h1 class="title" style="text-align:center;margin-bottom:22px">今天要做什么？</h1>
+            <div class="composer">
+              <div class="ta"><span class="slash-hl">/write-prd</span> 把 MD-18901 的需求整理成 PRD，写到 kb 的 requirements 目录</div>
+              <div class="popover" id="pop-slash" style="left:10px;top:-178px;width:440px">
+                <div class="ghead">Skill · cookbook-PM-agent 自带</div>
+                <div class="item hl"><span class="ico agent">S</span>/write-prd <span class="desc">按团队模板写 PRD</span></div>
+                <div class="item"><span class="ico agent">S</span>/requirement-review <span class="desc">对照代码检查需求可行性</span></div>
+                <div class="ghead">我的 skill</div>
+                <div class="item"><span class="ico repo">S</span>/weekly-summary <span class="desc">我的周报格式</span></div>
+                <div class="ghead">提示词模板</div>
+                <div class="item"><span class="ico repo">P</span>/explain <span class="desc">解释一段代码 $1</span></div>
+              </div>
+              <div class="composer-foot">
+                <button class="pill"><span class="ico agent" style="width:14px;height:14px;font-size:9px">A</span>cookbook-PM-agent <span class="caret"></span></button>
+                <button class="pill">claude-opus-5-5 <span class="caret"></span></button>
+                <button class="pill muted">思考：中 <span class="caret"></span></button>
+                <button class="send"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
+              </div>
+            </div>
+            <div class="card" style="margin-top:12px;padding:10px 14px">
+              <div class="tree card-tree">
+                <div class="node repo"><span class="tw">▾</span><span class="ico agent" style="width:14px;height:14px;font-size:9px">A</span><b>cookbook-PM-agent</b><span class="r"><a style="font-size:12.5px;font-weight:400">去设置里定制 →</a></span></div>
+                <div class="node file"><span class="tw">▾</span>仓库</div>
+                <div class="node file" style="padding-left:44px"><span class="ico repo" style="width:14px;height:14px;font-size:9px">R</span>food-truck/master-data-management <span class="r"><span class="badge read">只读</span></span></div>
+                <div class="node file" style="padding-left:44px"><span class="ico repo" style="width:14px;height:14px;font-size:9px">R</span>ct-kb/team-cookbook-feature <span class="r"><span class="badge write">可写</span></span></div>
+                <div class="node file" style="padding-left:44px"><span class="ico repo" style="width:14px;height:14px;font-size:9px">R</span>ct-kb/team-cookbook-kb <span class="r"><span class="badge write">可写</span></span></div>
+                <div class="node file"><span class="tw">▾</span>Skill</div>
+                <div class="node file" style="padding-left:44px">write-prd <span class="r"><span class="badge plat">平台</span></span></div>
+                <div class="node file" style="padding-left:44px">requirement-review <span class="r"><span class="badge plat">平台</span></span></div>
+                <div class="node file" style="padding-left:44px">weekly-summary <span class="r"><span class="badge mine">我的</span></span></div>
+              </div>
+            </div>
+          </div></div></div>
+          <span class="mark" style="left:246px;top:150px">1</span>
+          <span class="mark" style="left:246px;top:343px">2</span>
+          <span class="mark" style="left:246px;top:470px">3</span>
+          <span class="mark" style="left:860px;top:470px">4</span>
+        </div>
+      </section>
+
+      <!-- ===================== S4 Session · 产品 agent ===================== -->
+      <section class="screen" data-id="s4" data-title="会话 · 产品 agent 写 PRD" data-group="产品">
+        <aside class="side-nav">
+          <div class="brand"><span class="logo"><i></i></span>zen8agent</div>
+          <div class="mode-switch"><span class="on">任务</span><span>评审</span></div>
+          <a class="history-link">＋ 新建任务</a>
+          <div class="nav-sec">进行中</div>
+          <div class="nav-item is-active"><span class="dot"></span>把 MD-18901 整理成 PRD <span class="meta">1 分钟</span></div>
+          <div class="nav-sec">最近</div>
+          <div class="nav-item">回归用例：hot hold <span class="tag">agent</span></div>
+          <div class="nav-bottom"><span class="avatar"></span>lisazheng-xm<span class="cog">⚙</span></div>
+        </aside>
+        <div class="main">
+          <div class="app-header" style="position:relative"><span style="color:var(--muted-foreground)">←</span> 把 MD-18901 整理成 PRD <button class="badge mine" data-toggle="pop-agent-info" style="margin-left:6px;cursor:pointer"><span class="ico agent" style="width:12px;height:12px;font-size:8px;border:0">A</span> cookbook-PM-agent ▾</button><span class="grow"></span><span class="badge ok">● 运行中</span>
+            <div class="popover" id="pop-agent-info" style="left:170px;top:40px;width:420px;display:none;padding:12px 14px;font-weight:400">
+              <div class="row"><div class="grow"><b>cookbook-PM-agent</b><div class="kv">cookbook 团队 · 为团队撰写需求文档</div></div><a style="font-size:12.5px">去设置里定制 →</a></div>
+              <div class="divider" style="margin:10px 0"></div>
+              <div class="tree card-tree">
+                <div class="node file"><span class="tw">▾</span>仓库</div>
+                <div class="node file" style="padding-left:40px">master-data-management <span class="r"><span class="badge read">只读</span></span></div>
+                <div class="node file" style="padding-left:40px">team-cookbook-feature <span class="r"><span class="badge write">可写</span></span></div>
+                <div class="node file" style="padding-left:40px">team-cookbook-kb <span class="r"><span class="badge write">可写</span></span></div>
+                <div class="node file"><span class="tw">▾</span>Skill</div>
+                <div class="node file" style="padding-left:40px">write-prd · requirement-review <span class="r"><span class="badge plat">平台</span></span></div>
+                <div class="node file" style="padding-left:40px">weekly-summary <span class="r"><span class="badge mine">我的</span></span></div>
+                <div class="node file"><span class="tw">▾</span>提示词 <span class="badge mine" style="margin-left:4px">已定制</span></div>
+                <div class="node file kv" style="padding-left:40px;white-space:normal;line-height:1.5">你是 cookbook 团队的产品助理。写需求文档时使用 team-cookbook-kb/templates/prd.md 的结构…</div>
+              </div>
+            </div>
+          </div>
+          <div class="ws-bar">工作区
+            <span class="chip">master-data-management <span class="badge read">只读</span></span>
+            <span class="chip">team-cookbook-feature <span class="badge write">可写</span></span>
+            <span class="chip">team-cookbook-kb <span class="badge write">可写</span></span>
+            <span class="grow"></span><span class="tip">!<span class="tt" style="left:auto;right:0;top:22px">以 <b>lisazheng-xm</b> 身份提交，push 到 <code>main</code>。只读仓库 agent 不能 push。</span></span>
+          </div>
+          <div class="session">
+            <div class="chat">
+              <div class="msgs">
+                <div class="msg user">/write-prd 把 MD-18901 的需求整理成 PRD，写到 kb 的 requirements 目录</div>
+                <div class="tool">⌕ 读取 <code>team-cookbook-feature/MD-18901.md</code> <span class="ok">✓</span></div>
+                <div class="tool">⌕ 搜索 <code>packSize</code>（master-data-management） <span class="ok">✓</span></div>
+                <div class="msg agent">需求里"pack size 为 0 跳过 ERP 同步"对应代码在 <code>ItemSyncService.shouldSync()</code>，目前没有这个分支。我按团队 PRD 模板整理如下，并写入 <code>team-cookbook-kb/requirements/MD-18901.md</code>：</div>
+                <div class="tool">✎ 写入 <code>team-cookbook-kb/requirements/MD-18901.md</code> <span class="ok">✓</span></div>
+                <div class="tool">⇡ git push <code>team-cookbook-kb</code> → main <span class="ok">✓</span></div>
+                <div class="msg agent">已提交到 <code>ct-kb/team-cookbook-kb@main</code>（commit <code>3f9c1e2</code>，作者 lisazheng-xm）。代码仓库是只读的，我没有改动它；如果需要，我可以给出实现建议。</div>
+              </div>
+              <div style="padding:0 16px 14px"><div class="composer" style="padding:10px 12px 8px"><div class="ta"><span class="ph">继续对话，或输入 / 使用 skill…</span></div><div class="composer-foot"><button class="pill muted">claude-opus-5-5 <span class="caret"></span></button><button class="send off"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button></div></div></div>
+            </div>
+            <div class="diff"><div class="tree">
+              <div class="node repo"><span class="tw">▾</span>team-cookbook-kb <span class="cnt">1</span><span class="r"><span class="badge write">可写</span></span></div>
+              <div class="node file">＋ requirements/MD-18901.md <span class="plus">+84</span><span class="minus">−0</span></div>
+              <div class="node repo"><span class="tw">▸</span>team-cookbook-feature <span class="r"><span class="ro">无改动</span><span class="badge write">可写</span></span></div>
+              <div class="node repo"><span class="tw">▸</span>master-data-management <span class="r"><span class="ro">只读</span></span></div>
+            </div></div>
+          </div>
+          <span class="mark" style="left:560px;top:14px">1</span>
+          <span class="mark" style="left:246px;top:62px">2</span>
+          <span class="mark" style="left:880px;top:62px">3</span>
+          <span class="mark" style="left:860px;top:112px">4</span>
+          <span class="mark" style="left:246px;top:430px">5</span>
+        </div>
+      </section>
+
+      <!-- ===================== S4-DEV 会话 · 开发模式 ===================== -->
+      <section class="screen" data-id="s4dev" data-title="会话 · 开发模式（主仓库 + 上下文仓库）" data-group="开发">
+        <aside class="side-nav">
+          <div class="brand"><span class="logo"><i></i></span>zen8agent</div>
+          <div class="mode-switch"><span class="on">任务</span><span>评审</span></div>
+          <a class="history-link">＋ 新建任务</a>
+          <div class="nav-sec">进行中</div>
+          <div class="nav-item is-active"><span class="dot"></span>MD-18901 pack size 为 0 跳过同步 <span class="meta">4 分钟</span></div>
+          <div class="nav-sec">最近</div>
+          <div class="nav-item">MD-18845 pack size 校验 <span class="tag">仓库</span></div>
+          <div class="nav-bottom"><span class="avatar"></span>Cato-Wen<span class="cog">⚙</span></div>
+        </aside>
+        <div class="main">
+          <div class="app-header"><span style="color:var(--muted-foreground)">←</span> MD-18901 pack size 为 0 跳过同步 <span class="badge primary" style="margin-left:6px">master-data-management</span><span class="kv">⑂ feat/MD-18901</span><span class="grow"></span><span class="badge ok">● 运行中</span></div>
+          <div class="ws-bar">工作区
+            <span class="chip">master-data-management <span class="badge write">可写</span></span>
+            <span class="chip">team-cookbook-feature <span class="badge read">只读</span></span>
+            <span class="chip">team-cookbook-kb <span class="badge read">只读</span></span>
+            <span class="grow"></span><span class="tip">!<span class="tt" style="left:auto;right:0;top:22px">commit 和 PR 以 <b>Cato-Wen</b> 身份提交（个人 token）。只读仓库 agent 不能 push。</span></span>
+          </div>
+          <div class="session">
+            <div class="chat">
+              <div class="msgs">
+                <div class="msg user">MD-18901：pack size 为 0 时跳过 ERP 同步。先看 team-cookbook-feature 里的需求描述，再在代码里实现并补单测。</div>
+                <div class="tool">⌕ 读取 <code>../team-cookbook-feature/MD-18901.md</code> <span class="ok">✓</span></div>
+                <div class="tool">⌕ 读取 <code>../team-cookbook-kb/domain/erp-sync.md</code> <span class="ok">✓</span></div>
+                <div class="msg agent">需求：pack size = 0 的 item 不应触发 ERP 同步，且要记录跳过原因。kb 里的 ERP 同步说明指出同步入口在 <code>ItemSyncService.shouldSync()</code>。我在那里加分支并补单测：</div>
+                <div class="tool">✎ 修改 <code>core/.../ItemSyncService.java</code> <span class="ok">✓</span></div>
+                <div class="tool">✎ 修改 <code>core/.../ItemSyncServiceTest.java</code> <span class="ok">✓</span></div>
+                <div class="tool">▶ ./gradlew :core:test --tests ItemSyncServiceTest <span class="ok">✓ 12 个通过</span></div>
+                <div class="tool">⇡ git push origin feat/MD-18901 · gh pr create <span class="ok">✓ #4821</span></div>
+                <div class="msg agent">已开 PR <a>#4821</a>（作者 Cato-Wen）。上下文仓库是只读的，我没有改动它们。</div>
+              </div>
+              <div style="padding:0 16px 14px"><div class="composer" style="padding:10px 12px 8px"><div class="ta"><span class="ph">继续对话，或输入 / 使用 skill…</span></div><div class="composer-foot"><button class="pill muted">claude-opus-5-5 <span class="caret"></span></button><button class="send off"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button></div></div></div>
+            </div>
+            <div class="diff"><div class="tree">
+              <div class="node repo"><span class="tw">▾</span>master-data-management <span class="cnt">2</span><span class="r"><span class="badge write">可写</span></span></div>
+              <div class="node file">M core/…/ItemSyncService.java <span class="plus">+9</span><span class="minus">−1</span></div>
+              <div class="node file">M core/…/ItemSyncServiceTest.java <span class="plus">+31</span><span class="minus">−0</span></div>
+              <div class="node repo"><span class="tw">▸</span>team-cookbook-feature <span class="r"><span class="ro">只读 · 无改动</span></span></div>
+              <div class="node repo"><span class="tw">▸</span>team-cookbook-kb <span class="r"><span class="ro">只读 · 无改动</span></span></div>
+            </div></div>
+          </div>
+          <span class="mark" style="left:600px;top:14px">1</span>
+          <span class="mark" style="left:246px;top:62px">2</span>
+          <span class="mark" style="left:246px;top:120px">3</span>
+          <span class="mark" style="left:860px;top:112px">4</span>
+        </div>
+      </section>
+
+      <!-- ===================== S4-QA 会话 · 测试 agent ===================== -->
+      <section class="screen" data-id="s4qa" data-title="会话 · 测试 agent 写用例" data-group="测试">
+        <aside class="side-nav">
+          <div class="brand"><span class="logo"><i></i></span>zen8agent</div>
+          <div class="mode-switch"><span class="on">任务</span><span>评审</span></div>
+          <a class="history-link">＋ 新建任务</a>
+          <div class="nav-sec">进行中</div>
+          <div class="nav-item is-active"><span class="dot"></span>MD-18901 测试用例 <span class="meta">2 分钟</span></div>
+          <div class="nav-sec">最近</div>
+          <div class="nav-item">回归用例：hot hold <span class="tag">agent</span></div>
+          <div class="nav-bottom"><span class="avatar"></span>jennyz510<span class="cog">⚙</span></div>
+        </aside>
+        <div class="main">
+          <div class="app-header"><span style="color:var(--muted-foreground)">←</span> MD-18901 测试用例 <span class="badge mine" style="margin-left:6px"><span class="ico agent" style="width:12px;height:12px;font-size:8px;border:0">A</span> cookbook-testing-agent</span><span class="grow"></span><span class="badge ok">● 运行中</span></div>
+          <div class="ws-bar">工作区
+            <span class="chip">master-data-management <span class="badge read">只读</span></span>
+            <span class="chip">team-cookbook-feature <span class="badge read">只读</span></span>
+            <span class="chip">team-cookbook-kb <span class="badge read">只读</span></span>
+            <span class="chip">cookbook-test-cases <span class="badge write">可写</span></span>
+            <span class="grow"></span><span class="tip">!<span class="tt" style="left:auto;right:0;top:22px">以 <b>jennyz510</b> 身份提交，push 到 <code>main</code>。只读仓库 agent 不能 push。</span></span>
+          </div>
+          <div class="session">
+            <div class="chat">
+              <div class="msgs">
+                <div class="msg user"><span class="slash-hl">/jira-test-doc</span> MD-18901 —— 根据需求和实际代码改动写测试用例，放到 cookbook-test-cases/md/MD-18901.md</div>
+                <div class="tool">⌕ 读取 <code>team-cookbook-feature/MD-18901.md</code> <span class="ok">✓</span></div>
+                <div class="tool">⌕ 搜索 <code>shouldSync</code>（master-data-management） <span class="ok">✓</span></div>
+                <div class="tool">⌕ 读取 <code>master-data-management/core/…/ItemSyncService.java</code> <span class="ok">✓</span></div>
+                <div class="msg agent">代码里新增的分支：<code>packSize == 0 → skip, reason = "PACK_SIZE_ZERO"</code>。结合需求，我整理了 7 条用例（正向 2、边界 3、回归 2），并按 jira-test-doc 的表格格式写入：</div>
+                <div class="tool">✎ 写入 <code>cookbook-test-cases/md/MD-18901.md</code> <span class="ok">✓</span></div>
+                <div class="tool">⇡ git push <code>cookbook-test-cases</code> → main <span class="ok">✓</span></div>
+                <div class="msg agent">已提交（作者 jennyz510）。需要我把用例同步成 Jira 评论吗？</div>
+              </div>
+              <div style="padding:0 16px 14px"><div class="composer" style="padding:10px 12px 8px"><div class="ta"><span class="ph">继续对话，或输入 / 使用 skill…</span></div><div class="composer-foot"><button class="pill muted">claude-opus-5-5 <span class="caret"></span></button><button class="send off"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button></div></div></div>
+            </div>
+            <div class="diff"><div class="tree">
+              <div class="node repo"><span class="tw">▾</span>cookbook-test-cases <span class="cnt">1</span><span class="r"><span class="badge write">可写</span></span></div>
+              <div class="node file">＋ md/MD-18901.md <span class="plus">+62</span><span class="minus">−0</span></div>
+              <div class="node repo"><span class="tw">▸</span>master-data-management <span class="r"><span class="ro">只读</span></span></div>
+              <div class="node repo"><span class="tw">▸</span>team-cookbook-feature <span class="r"><span class="ro">只读</span></span></div>
+              <div class="node repo"><span class="tw">▸</span>team-cookbook-kb <span class="r"><span class="ro">只读</span></span></div>
+            </div></div>
+          </div>
+          <span class="mark" style="left:246px;top:62px">1</span>
+          <span class="mark" style="left:246px;top:120px">2</span>
+          <span class="mark" style="left:880px;top:62px">3</span>
+        </div>
+      </section>
+
+      <!-- ===================== S5 设置 · GitHub 账号 / PAT ===================== -->
+      <section class="screen" data-id="s5" data-title="设置 · GitHub 账号（个人 token）" data-group="开发">
+        <aside class="side-nav">
+          <div class="brand"><span class="logo"><i></i></span>zen8agent</div>
+          <div class="mode-switch"><span class="on">任务</span><span>评审</span></div>
+          <a class="history-link">＋ 新建任务</a>
+          <div class="nav-sec">最近</div>
+          <div class="nav-item">MD-18845 pack size 校验 <span class="tag">仓库</span></div>
+          <div class="nav-bottom"><span class="avatar"></span>Cato-Wen<span class="cog">⚙</span></div>
+        </aside>
+        <div class="main">
+          <div class="app-header">设置</div>
+          <div class="content"><div class="wide">
+            <div class="tabs"><span class="on">账号</span><span data-go="s6">我的 agent</span><span data-go="s7">Skill</span><span data-go="s5repo">仓库</span></div>
+            <div class="section">
+              <h2 class="h">GitHub 账号</h2>
+              <p class="sub">你的登录身份。添加个人访问 token 后，可以用自己的身份开发。</p>
+            </div>
+            <div class="card" style="margin-top:16px">
+              <div class="row"><div class="icon-sq">◉</div><div class="grow"><div style="font-weight:500">GitHub</div><div class="kv">已登录 <b>Cato-Wen</b> · 用户 id 104287479</div></div><button class="btn sm">断开</button></div>
+            </div>
+
+            <div class="card" id="pat-card">
+              <div class="row top">
+                <div class="icon-sq">🔑</div>
+                <div class="grow">
+                  <div style="font-weight:500">个人访问 token（PAT）</div>
+                  <div class="kv" style="margin-top:2px">用于<b>以你的身份</b> clone、commit、push 和创建 PR。服务端加密保存，保存后不再显示。</div>
+
+                  <!-- 状态：未绑定 -->
+                  <div data-state="none">
+                    <div class="row" style="margin-top:14px"><input class="input mono grow" placeholder="ghp_… 或 github_pat_…" /><button class="btn primary">保存</button></div>
+                    <details class="guide" open><summary>如何创建 token</summary>
+                      <ol>
+                        <li><b>Classic（推荐，立即可用）：</b>GitHub → Settings → Developer settings → Tokens (classic) → Generate。只勾选 <code>repo</code> 和 <code>workflow</code>。</li>
+                        <li><b>Fine-grained（范围更小，需要组织审批）：</b>Resource owner 选 <code>food-truck</code> → 只选你负责的仓库 → Contents 读写、Pull requests 读写。</li>
+                        <li>如果 token 旁出现 <b>Configure SSO</b>，请授权 <code>food-truck</code>。</li>
+                      </ol></details>
+                  </div>
+
+                  <!-- 状态：有效 -->
+                  <div data-state="ok" style="display:none">
+                    <div class="row" style="margin-top:14px;gap:8px;flex-wrap:wrap"><span class="badge ok">✓ 有效</span><span class="kv">classic · <code>ghp_…L18g</code> · 权限 <code>repo, workflow</code> · <b>2026-12-05</b> 到期（30 天）</span></div>
+                    <div class="kv" style="margin-top:8px">可写仓库：<b>food-truck/master-data-management</b>、ct-kb/team-cookbook-feature 等 14 个</div>
+                    <div class="row" style="margin-top:12px;gap:8px"><button class="btn sm">更换</button><button class="btn sm danger">删除</button></div>
+                  </div>
+
+                  <!-- 状态：等待审批 -->
+                  <div data-state="pending" style="display:none">
+                    <div class="row" style="margin-top:14px;gap:8px;flex-wrap:wrap"><span class="badge warn">⏳ 等待组织审批</span><span class="kv">fine-grained · <code>github_pat_…WURK</code> · 2027-11-06 到期</span></div>
+                    <div class="callout warn" style="margin-top:10px">token 本身有效，但还访问不了 <b>food-truck</b> 的仓库：该组织要求 fine-grained token 经管理员审批。可以等待，或换成 classic token（<code>repo</code> + <code>workflow</code>）立即开始。</div>
+                    <div class="row" style="margin-top:12px;gap:8px"><button class="btn sm">重新检查</button><button class="btn sm">更换</button><button class="btn sm danger">删除</button></div>
+                  </div>
+
+                  <!-- 状态：失效 -->
+                  <div data-state="expired" style="display:none">
+                    <div class="row" style="margin-top:14px;gap:8px;flex-wrap:wrap"><span class="badge err">✕ 已失效或过期</span><span class="kv">classic · <code>ghp_…L18g</code></span></div>
+                    <div class="callout err" style="margin-top:10px">GitHub 拒绝了这个 token。依赖它的任务会失败，直到你更换新的 token。</div>
+                    <div class="row" style="margin-top:12px"><input class="input mono grow" placeholder="粘贴新的 token" /><button class="btn primary">保存</button></div>
+                  </div>
+
+                  <!-- 状态：不属于本人 -->
+                  <div data-state="mismatch" style="display:none">
+                    <div class="row" style="margin-top:14px"><input class="input mono grow" value="ghp_••••••••••••••••••••••" /><button class="btn primary">保存</button></div>
+                    <div class="callout err" style="margin-top:10px">这个 token 属于 <b>wenbbinchina</b>，不是当前登录账号 <b>Cato-Wen</b>。请使用你自己创建的 token。</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="section"><h2 class="h">模型</h2><p class="sub">选择默认模型，管理模型提供方连接。</p></div>
+            <div class="card" style="margin-top:16px"><div class="row"><div class="icon-sq">✦</div><div class="grow"><div style="font-weight:500">Anthropic</div><div class="kv">claude-opus-5-5 · 默认</div></div><button class="btn sm">管理</button></div></div>
+          </div></div>
+          <span class="mark" style="left:246px;top:60px">1</span>
+          <span class="mark" style="left:246px;top:250px">2</span>
+          <span class="mark" style="left:860px;top:300px">3</span>
+        </div>
+      </section>
+
+      <!-- ===================== S5-REPO 设置 · 仓库（GitHub App） ===================== -->
+      <section class="screen" data-id="s5repo" data-title="设置 · 仓库（GitHub App 安装）" data-group="开发">
+        <aside class="side-nav">
+          <div class="brand"><span class="logo"><i></i></span>zen8agent</div>
+          <div class="mode-switch"><span class="on">任务</span><span>评审</span></div>
+          <a class="history-link">＋ 新建任务</a>
+          <div class="nav-bottom"><span class="avatar"></span>Cato-Wen<span class="cog">⚙</span></div>
+        </aside>
+        <div class="main">
+          <div class="app-header">设置</div>
+          <div class="content"><div class="wide">
+            <div class="tabs"><span data-go="s5">账号</span><span data-go="s6">我的 agent</span><span data-go="s7">Skill</span><span class="on">仓库</span></div>
+            <div class="section"><h2 class="h">仓库 <span class="tip">!<span class="tt">这里列出你通过 GitHub App 安装能访问的仓库（现有功能，用于自动评审）。开发写代码不依赖它，绑定个人 token 即可。</span></span></h2></div>
+            <div class="card" style="margin-top:16px">
+              <div class="row"><div class="icon-sq">◉</div><div class="grow"><div style="font-weight:500">ct-kb</div><div class="kv">GitHub App 已安装 · 12 个仓库</div></div><span class="badge ok">已安装</span></div>
+              <div class="divider"></div>
+              <table class="table"><thead><tr><th>仓库</th><th>自动评审</th></tr></thead><tbody>
+                <tr><td class="mono">ct-kb/team-cookbook-kb</td><td><input type="checkbox" /></td></tr>
+                <tr><td class="mono">ct-kb/team-cookbook-feature</td><td><input type="checkbox" /></td></tr>
+                <tr><td class="mono">ct-kb/cookbook-test-cases</td><td><input type="checkbox" /></td></tr>
+              </tbody></table>
+            </div>
+            <div class="card">
+              <div class="row"><div class="icon-sq">◉</div><div class="grow"><div style="font-weight:500">food-truck</div><div class="kv">GitHub App 未安装（等待组织审批）· 开发请使用个人 token</div></div><span class="badge warn">未安装</span></div>
+            </div>
+          </div></div>
+          <span class="mark" style="left:246px;top:60px">1</span>
+          <span class="mark" style="left:246px;top:330px">2</span>
+        </div>
+      </section>
+
+      <!-- ===================== S6 设置 · 我的 agent ===================== -->
+      <section class="screen" data-id="s6" data-title="设置 · 我的 agent（个人定制）" data-group="产品">
+        <aside class="side-nav">
+          <div class="brand"><span class="logo"><i></i></span>zen8agent</div>
+          <div class="mode-switch"><span class="on">任务</span><span>评审</span></div>
+          <a class="history-link">＋ 新建任务</a>
+          <div class="nav-bottom"><span class="avatar"></span>lisazheng-xm<span class="cog">⚙</span></div>
+        </aside>
+        <div class="main">
+          <div class="app-header">设置</div>
+          <div class="content"><div class="wide">
+            <div class="tabs"><span data-go="s5">账号</span><span class="on">我的 agent</span><span data-go="s7">Skill</span><span data-go="s5repo">仓库</span></div>
+            <div class="section"><h2 class="h">我的 agent</h2><p class="sub">管理员分配给你的 agent。这里的修改只对你自己生效。</p></div>
+            <div style="display:grid;grid-template-columns:260px minmax(0,1fr);gap:16px;margin-top:16px">
+              <div>
+                <div class="list-item sel"><span class="ico agent">A</span><div class="grow"><div style="font-weight:500">cookbook-PM-agent</div><div class="kv">cookbook · 已定制</div></div></div>
+                <div class="list-item"><span class="ico agent">A</span><div class="grow"><div style="font-weight:500">cookbook-testing-agent</div><div class="kv">cookbook</div></div></div>
+                <div class="empty" style="margin-top:12px;padding:18px">需要别的 agent？联系管理员。</div>
+              </div>
+              <div class="card">
+                <div class="row"><div class="grow"><div style="font-weight:500;font-size:15px">cookbook-PM-agent</div><div class="kv">为 cookbook 团队撰写需求文档。仓库和基础行为由管理员维护。</div></div></div>
+                <div class="divider"></div>
+                <span class="lbl">仓库 <span style="color:#9a9a9f">（由管理员维护，不可修改）</span></span>
+                <div class="chips"><span class="chip">master-data-management <span class="badge read">只读</span></span><span class="chip">team-cookbook-feature <span class="badge write">可写</span></span><span class="chip">team-cookbook-kb <span class="badge write">可写</span></span></div>
+                <div class="divider"></div>
+                <div class="row"><span class="lbl" style="margin:0">系统提示词</span><span class="grow"></span><span class="badge mine">已定制</span><button class="btn sm ghost">恢复默认</button></div>
+                <textarea class="textarea" style="margin-top:8px">你是 cookbook 团队的产品助理。写需求文档时使用 team-cookbook-kb/templates/prd.md 的结构；涉及代码时先在 master-data-management 里确认现状，再给结论。
+
+（我的补充）输出用中文；每个 PRD 末尾加一节"对测试的提示"。</textarea>
+                <div class="divider"></div>
+                <span class="lbl">Skill</span>
+                <label class="check"><input type="checkbox" checked /> write-prd <span class="badge plat">平台 · 默认</span></label>
+                <label class="check"><input type="checkbox" /> requirement-review <span class="badge plat">平台 · 默认</span> <span class="kv">我已移除</span></label>
+                <label class="check"><input type="checkbox" checked /> weekly-summary <span class="badge mine">我的</span></label>
+                <label class="check"><input type="checkbox" /> jira-test-doc <span class="badge plat">平台</span></label>
+                <div class="row" style="margin-top:14px;gap:8px"><button class="btn primary">保存</button><button class="btn">放弃</button><span class="kv" style="margin-left:auto">下一个任务开始生效</span></div>
+              </div>
+            </div>
+          </div></div>
+          <span class="mark" style="left:246px;top:170px">1</span>
+          <span class="mark" style="left:540px;top:238px">2</span>
+          <span class="mark" style="left:540px;top:320px">3</span>
+          <span class="mark" style="left:540px;top:560px">4</span>
+        </div>
+      </section>
+
+      <!-- ===================== S7 设置 · Skill ===================== -->
+      <section class="screen" data-id="s7" data-title="设置 · Skill（个人）" data-group="通用">
+        <aside class="side-nav">
+          <div class="brand"><span class="logo"><i></i></span>zen8agent</div>
+          <div class="mode-switch"><span class="on">任务</span><span>评审</span></div>
+          <a class="history-link">＋ 新建任务</a>
+          <div class="nav-bottom"><span class="avatar"></span>lisazheng-xm<span class="cog">⚙</span></div>
+        </aside>
+        <div class="main">
+          <div class="app-header">设置</div>
+          <div class="content"><div class="wide">
+            <div class="tabs"><span data-go="s5">账号</span><span data-go="s6">我的 agent</span><span class="on">Skill</span><span data-go="s5repo">仓库</span></div>
+            <div class="section row"><div class="grow"><h2 class="h">Skill</h2><p class="sub">我的 skill 只有自己可见。平台 skill 由管理员发布，可以挂到你的 agent 上。</p></div><button class="btn primary">＋ 新建 skill</button></div>
+            <div style="display:grid;grid-template-columns:280px minmax(0,1fr);gap:16px;margin-top:16px">
+              <div>
+                <div class="nav-sec" style="padding-left:4px">我的</div>
+                <div class="list-item sel"><div class="grow"><div style="font-weight:500">weekly-summary</div><div class="kv">我的周报格式</div></div><span class="badge mine">我的</span></div>
+                <div class="list-item"><div class="grow"><div style="font-weight:500">menu-glossary</div><div class="kv">菜单术语对照</div></div><span class="badge mine">我的</span></div>
+                <div class="nav-sec" style="padding-left:4px">平台</div>
+                <div class="list-item"><div class="grow"><div style="font-weight:500">write-prd</div><div class="kv">按团队模板写 PRD</div></div><span class="badge plat">只读</span></div>
+                <div class="list-item"><div class="grow"><div style="font-weight:500">jira-test-doc</div><div class="kv">从 Jira 生成测试文档</div></div><span class="badge plat">只读</span></div>
+              </div>
+              <div class="card">
+                <div class="row"><div class="grow"><span class="lbl">名称 <span style="color:#9a9a9f">· 即 /weekly-summary</span></span><input class="input mono" value="weekly-summary" /></div><div style="width:140px"><span class="lbl">类型</span><span class="select" style="width:100%">Skill ▾</span></div></div>
+                <span class="lbl" style="margin-top:12px">描述</span><input class="input" value="我的周报格式" />
+                <span class="lbl" style="margin-top:12px">内容 <span style="color:#9a9a9f">· Markdown（SKILL.md 正文）</span></span>
+                <textarea class="textarea mono" style="min-height:220px;font-family:'Geist Mono',monospace;font-size:12px">## 周报格式
+
+1. 本周完成（按 Jira 单号列出，附 PR 链接）
+2. 进行中 / 风险
+3. 下周计划
+
+要求：每条不超过一行；引用代码路径时用反引号；最后给出一句总结。</textarea>
+                <div class="row" style="margin-top:14px;gap:8px"><button class="btn primary">保存</button><button class="btn">放弃</button><button class="btn danger" style="margin-left:auto">删除</button></div>
+              </div>
+            </div>
+          </div></div>
+          <span class="mark" style="left:246px;top:170px">1</span>
+          <span class="mark" style="left:246px;top:230px">2</span>
+          <span class="mark" style="left:560px;top:180px">3</span>
+        </div>
+      </section>
+
+      <!-- ===================== S8 管理 · 平台凭证 ===================== -->
+      <section class="screen" data-id="s8" data-title="管理 · 平台凭证" data-group="管理员">
+        <aside class="side-nav">
+          <div class="brand"><span class="logo"><i></i></span>zen8agent</div>
+          <div class="mode-switch"><span class="on">任务</span><span>评审</span></div>
+          <a class="history-link">＋ 新建任务</a>
+          <div class="nav-sec">管理</div>
+          <div class="nav-item is-active">平台凭证</div>
+          <div class="nav-item">Agent</div>
+          <div class="nav-item">Skill</div>
+          <div class="nav-item">插件</div>
+          <div class="nav-bottom"><span class="avatar"></span>Cato-Wen <span class="badge plat" style="margin-left:4px">管理员</span><span class="cog">⚙</span></div>
+        </aside>
+        <div class="main">
+          <div class="app-header"><span class="crumb">管理 /</span> 平台凭证</div>
+          <div class="content"><div class="wide">
+            <div class="section row"><div class="grow"><h2 class="h">平台凭证 <span class="tip open">!<span class="tt">给<b>没有安装 GitHub App 的组织</b>（目前是 food-truck）各录一个 token，平台用它替 agent 读代码。保存时会逐仓库探测这个 token 能读还是能写。<br/><br/>装了 App 的组织（ct-kb）不需要 token：用户用自己的登录身份读写。</span></span></h2></div><button class="btn primary" data-toggle="cred-add">＋ 添加 token</button></div>
+
+            <div class="card" id="cred-add" style="margin-top:16px;display:none;border-color:var(--foreground)">
+              <div class="row"><div class="grow"><span class="lbl">名称</span><input class="input" placeholder="例如：food-truck 只读" /></div><div style="width:120px"><span class="lbl">平台</span><span class="select" style="width:100%">GitHub ▾</span></div></div>
+              <span class="lbl" style="margin-top:12px">Token</span><input class="input mono" placeholder="github_pat_… / ghp_…" />
+              <div class="row" style="margin-top:12px;gap:8px"><button class="btn primary">保存并探测</button><button class="btn" data-toggle="cred-add">取消</button></div>
+            </div>
+
+            <div class="card" style="margin-top:16px">
+              <div class="row"><div class="icon-sq">🔑</div><div class="grow"><div class="row" style="gap:8px"><b>food-truck 只读</b><span class="badge ok">有效</span></div><div class="kv">所属 <b>Cato-Wen</b> · <code>…LfRh</code> · <b>2027-11-05</b> 到期</div></div><button class="btn sm">重新探测</button><button class="btn sm">更换</button><button class="btn sm danger">删除</button></div>
+              <div class="divider"></div>
+              <table class="table"><thead><tr><th>仓库</th><th style="width:90px">权限</th><th>使用它的 agent</th></tr></thead><tbody>
+                <tr><td class="mono">food-truck/master-data-management</td><td><span class="badge read">只读</span></td><td class="kv">cookbook-PM-agent、cookbook-testing-agent</td></tr>
+              </tbody></table>
+            </div>
+
+            <div class="card">
+              <div class="row"><div class="icon-sq">◉</div><div class="grow"><div class="row" style="gap:8px"><b>GitHub App · ct-kb</b><span class="badge ok">已安装</span></div><div class="kv">12 个仓库 · 用户以本人登录身份读写，不需要 token</div></div><a class="btn sm">管理安装 →</a></div>
+            </div>
+          </div></div>
+          <span class="mark" style="left:246px;top:60px">1</span>
+          <span class="mark" style="left:246px;top:150px">2</span>
+          <span class="mark" style="left:246px;top:250px">3</span>
+          <span class="mark" style="left:246px;top:330px">4</span>
+        </div>
+      </section>
+
+      <!-- ===================== S9 管理 · Agent ===================== -->
+      <section class="screen" data-id="s9" data-title="管理 · Agent（定义与分配）" data-group="管理员">
+        <aside class="side-nav">
+          <div class="brand"><span class="logo"><i></i></span>zen8agent</div>
+          <div class="mode-switch"><span class="on">任务</span><span>评审</span></div>
+          <a class="history-link">＋ 新建任务</a>
+          <div class="nav-sec">管理</div>
+          <div class="nav-item">平台凭证</div>
+          <div class="nav-item is-active">Agent</div>
+          <div class="nav-item">Skill</div>
+          <div class="nav-item">插件</div>
+          <div class="nav-bottom"><span class="avatar"></span>Cato-Wen <span class="badge plat" style="margin-left:4px">管理员</span><span class="cog">⚙</span></div>
+        </aside>
+        <div class="main">
+          <div class="app-header"><span class="crumb">管理 /</span> Agent</div>
+          <div class="content"><div class="wide" style="max-width:900px">
+            <div class="section row"><div class="grow"><h2 class="h">Agent</h2><p class="sub">给产品和测试用的内置 agent。定义仓库、基础提示词和默认 skill，然后分配给人。</p></div><button class="btn primary">＋ 新建 agent</button></div>
+            <div style="display:grid;grid-template-columns:250px minmax(0,1fr);gap:16px;margin-top:16px">
+              <div>
+                <div class="nav-sec" style="padding-left:4px"><span class="badge team">cookbook</span></div>
+                <div class="list-item sel"><span class="ico agent">A</span><div class="grow"><div style="font-weight:500">cookbook-PM-agent</div><div class="kv">3 个仓库 · 4 人</div></div></div>
+                <div class="list-item"><span class="ico agent">A</span><div class="grow"><div style="font-weight:500">cookbook-testing-agent</div><div class="kv">4 个仓库 · 3 人</div></div></div>
+                <div class="nav-sec" style="padding-left:4px"><span class="badge team">consumer</span></div>
+                <div class="list-item"><span class="ico agent">A</span><div class="grow"><div style="font-weight:500">consumer-PM-agent</div><div class="kv">2 个仓库 · 2 人</div></div></div>
+                <div class="list-item"><span class="ico agent">A</span><div class="grow"><div style="font-weight:500">consumer-testing-agent</div><div class="kv">2 个仓库 · 0 人</div></div></div>
+              </div>
+              <div class="card">
+                <div class="row"><div class="grow"><span class="lbl">名称</span><input class="input" value="cookbook-PM-agent" /></div><div style="width:150px"><span class="lbl">团队</span><span class="select" style="width:100%">cookbook ▾</span></div></div>
+                <span class="lbl" style="margin-top:12px">描述 <span style="color:#9a9a9f">· 用户可见</span></span><input class="input" value="为 cookbook 团队撰写需求文档。" />
+                <div class="divider"></div>
+                <div class="row"><span class="lbl" style="margin:0">仓库</span><span class="grow"></span><span class="kv">只能选平台凭证或 GitHub App 能访问的仓库</span></div>
+                <table class="table" style="margin-top:6px"><thead><tr><th>仓库</th><th style="width:130px">权限</th><th style="width:220px">运行时使用的凭证</th><th></th></tr></thead><tbody>
+                  <tr><td class="mono">food-truck/master-data-management</td><td><span class="select">只读 ▾</span></td><td class="kv">food-truck 只读</td><td class="act"><button class="btn sm ghost">✕</button></td></tr>
+                  <tr><td class="mono">ct-kb/team-cookbook-feature</td><td><span class="select">可写 ▾</span></td><td class="kv">用户本人登录（GitHub App）</td><td class="act"><button class="btn sm ghost">✕</button></td></tr>
+                  <tr><td class="mono">ct-kb/team-cookbook-kb</td><td><span class="select">可写 ▾</span></td><td class="kv">用户本人登录（GitHub App）</td><td class="act"><button class="btn sm ghost">✕</button></td></tr>
+                  <tr><td colspan="4"><button class="chip add" data-toggle="pop-agent-repo">＋ 添加仓库</button>
+                    <div class="popover" id="pop-agent-repo" style="position:relative;left:0;top:6px;width:460px;display:none">
+                      <div class="search">⌕ <span style="color:#9a9a9f">搜索可访问的仓库…</span></div>
+                      <div class="item"><span class="ico repo">R</span>ct-kb/cookbook-test-cases <span class="desc">最高：可写（App）</span></div>
+                      <div class="item"><span class="ico repo">R</span>ct-kb/team-consumer-kb <span class="desc">最高：可写（App）</span></div>
+                      <div class="item" style="color:var(--muted-foreground)"><span class="ico repo">R</span>food-truck/wonder-consumer-project <span class="desc">无法访问 · 请先添加凭证</span></div>
+                    </div></td></tr>
+                </tbody></table>
+                <div class="divider"></div>
+                <span class="lbl">基础系统提示词</span>
+                <textarea class="textarea" style="min-height:90px">你是 cookbook 团队的产品助理。写需求文档时使用 team-cookbook-kb/templates/prd.md 的结构；涉及代码时先在 master-data-management 里确认现状，再给结论。</textarea>
+                <div class="divider"></div>
+                <span class="lbl">默认 skill</span>
+                <div class="chips"><span class="chip">write-prd <span class="x">✕</span></span><span class="chip">requirement-review <span class="x">✕</span></span><button class="chip add">＋ 添加平台 skill</button></div>
+                <div class="divider"></div>
+                <div class="row"><span class="lbl" style="margin:0">分配给</span><span class="grow"></span><span class="kv">按 GitHub 用户 id 匹配，对方不需要先登录过</span></div>
+                <div class="row" style="margin-top:8px"><input class="input grow" placeholder="GitHub 登录名，逗号或换行分隔：lisazheng-xm, jennyz510" /><button class="btn">分配</button></div>
+                <table class="table" style="margin-top:8px"><tbody>
+                  <tr><td><b>lisazheng-xm</b> <span class="kv">· 已登录 · 定制了提示词</span></td><td class="kv">Cato-Wen 分配 · 2026-11-05</td><td class="act"><button class="btn sm ghost danger">撤销</button></td></tr>
+                  <tr><td><b>jennyz510</b> <span class="kv">· 已登录</span></td><td class="kv">Cato-Wen 分配 · 2026-11-05</td><td class="act"><button class="btn sm ghost danger">撤销</button></td></tr>
+                  <tr><td><b>nancyliu-ghub</b> <span class="kv">· 还没登录过</span></td><td class="kv">Cato-Wen 分配 · 2026-11-05</td><td class="act"><button class="btn sm ghost danger">撤销</button></td></tr>
+                  <tr><td><b>amylyu-wonder777</b> <span class="badge warn" style="margin-left:4px">在 team-cookbook-kb 没有写权限</span></td><td class="kv">Cato-Wen 分配 · 2026-11-05</td><td class="act"><button class="btn sm ghost danger">撤销</button></td></tr>
+                </tbody></table>
+                <div class="row" style="margin-top:14px;gap:8px"><button class="btn primary">保存</button><button class="btn">放弃</button><button class="btn danger" style="margin-left:auto">归档 agent</button></div>
+              </div>
+            </div>
+          </div></div>
+          <span class="mark" style="left:246px;top:170px">1</span>
+          <span class="mark" style="left:520px;top:272px">2</span>
+          <span class="mark" style="left:860px;top:272px">3</span>
+          <span class="mark" style="left:520px;top:560px">4</span>
+          <span class="mark" style="left:520px;top:640px">5</span>
+        </div>
+      </section>
+
+      <!-- ===================== S10 管理 · Skill ===================== -->
+      <section class="screen" data-id="s10" data-title="管理 · Skill（平台）" data-group="管理员">
+        <aside class="side-nav">
+          <div class="brand"><span class="logo"><i></i></span>zen8agent</div>
+          <div class="mode-switch"><span class="on">任务</span><span>评审</span></div>
+          <a class="history-link">＋ 新建任务</a>
+          <div class="nav-sec">管理</div>
+          <div class="nav-item">平台凭证</div>
+          <div class="nav-item">Agent</div>
+          <div class="nav-item is-active">Skill</div>
+          <div class="nav-item">插件</div>
+          <div class="nav-bottom"><span class="avatar"></span>Cato-Wen <span class="badge plat" style="margin-left:4px">管理员</span><span class="cog">⚙</span></div>
+        </aside>
+        <div class="main">
+          <div class="app-header"><span class="crumb">管理 /</span> Skill</div>
+          <div class="content"><div class="wide">
+            <div class="section row"><div class="grow"><h2 class="h">平台 skill <span class="tip">!<span class="tt">对所有人发布的 skill。挂到 agent 上作为默认 skill；用户也可以在"我的 agent"里自行勾选。禁用后立即从所有 agent 和 / 候选里消失，但不删除。</span></span></h2></div><button class="btn primary">＋ 新建 skill</button></div>
+            <table class="table" style="margin-top:16px"><thead><tr><th>名称</th><th>描述</th><th>来源</th><th>使用它的 agent</th><th>启用</th><th></th></tr></thead><tbody>
+              <tr><td class="mono">write-prd</td><td class="kv">按团队模板写 PRD</td><td><span class="badge plat">平台</span></td><td class="kv">cookbook-PM、consumer-PM</td><td><input type="checkbox" checked /></td><td class="act"><button class="btn sm">编辑</button></td></tr>
+              <tr><td class="mono">requirement-review</td><td class="kv">对照代码检查需求可行性</td><td><span class="badge plat">平台</span></td><td class="kv">cookbook-PM</td><td><input type="checkbox" checked /></td><td class="act"><button class="btn sm">编辑</button></td></tr>
+              <tr><td class="mono">jira-test-doc</td><td class="kv">从 Jira 生成测试文档</td><td><span class="badge plat">平台</span></td><td class="kv">cookbook-testing、consumer-testing</td><td><input type="checkbox" checked /></td><td class="act"><button class="btn sm">编辑</button></td></tr>
+              <tr><td class="mono">wonder-conventions</td><td class="kv">代码与文档约定</td><td><span class="badge plat">平台</span></td><td class="kv">所有 agent</td><td><input type="checkbox" checked /></td><td class="act"><button class="btn sm">编辑</button></td></tr>
+              <tr><td class="mono">explain</td><td class="kv">解释一段代码 $1（提示词模板）</td><td><span class="badge plat">平台</span></td><td class="kv">所有 agent</td><td><input type="checkbox" checked /></td><td class="act"><button class="btn sm">编辑</button></td></tr>
+              <tr><td class="mono">context7-docs</td><td class="kv">查询第三方库文档</td><td><span class="badge ctx">插件 context7</span></td><td class="kv">所有 agent</td><td><input type="checkbox" checked /></td><td class="act"><button class="btn sm ghost" disabled style="opacity:.5">只读</button></td></tr>
+              <tr><td class="mono">exa-search</td><td class="kv">网页搜索</td><td><span class="badge ctx">插件 exa</span></td><td class="kv">—</td><td><input type="checkbox" /></td><td class="act"><button class="btn sm ghost" disabled style="opacity:.5">只读</button></td></tr>
+            </tbody></table>
+          </div></div>
+          <span class="mark" style="left:246px;top:60px">1</span>
+          <span class="mark" style="left:640px;top:152px">2</span>
+          <span class="mark" style="left:640px;top:400px">3</span>
+        </div>
+      </section>
+
+      <!-- ===================== S11 首次登录引导 ===================== -->
+      <section class="screen" data-id="s11" data-title="首次登录 · 引导" data-group="通用">
+        <aside class="side-nav">
+          <div class="brand"><span class="logo"><i></i></span>zen8agent</div>
+          <div class="mode-switch"><span class="on">任务</span><span>评审</span></div>
+          <a class="history-link active">＋ 新建任务</a>
+          <div class="nav-bottom"><span class="avatar"></span>newhire-01<span class="cog">⚙</span></div>
+        </aside>
+        <div class="main">
+          <div class="app-header">新建任务</div>
+          <div class="content"><div class="center"><div class="narrow">
+            <div class="onboard">
+              <div style="font-size:16px;font-weight:500;letter-spacing:-.01em">欢迎，newhire-01，你已登录。</div>
+              <p class="sub">你还没有任何仓库或 agent 的访问权限。按你的角色选一条路径：</p>
+              <div class="two">
+                <div class="opt"><h4>我写代码</h4><p>添加一个 GitHub 个人访问 token。commit 和 PR 将以你的身份提交。</p><button class="btn primary sm">去设置里添加 token</button></div>
+                <div class="opt"><h4>我是产品 / 测试</h4><p>由管理员给你分配团队 agent（例如 <b>cookbook-PM-agent</b>），agent 已经知道该用哪些仓库。</p><button class="btn sm">复制申请文案</button></div>
+              </div>
+            </div>
+            <div class="composer" style="margin-top:16px;opacity:.55">
+              <div class="ta"><span class="ph">描述要让 Pi 完成的任务…</span></div>
+              <div class="composer-foot"><button class="pill muted"><span class="ic"></span>选择 agent 或仓库 <span class="caret"></span></button><button class="send off"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button></div>
+            </div>
+          </div></div></div>
+          <span class="mark" style="left:246px;top:226px">1</span>
+          <span class="mark" style="left:600px;top:330px">2</span>
+        </div>
+      </section>
+
+    </div></div>
+
+    <aside class="notes" id="notes"></aside>
+  </div>
+</div>
+
+<script>
+const NOTES = {
+  s1: { route: "/chat", items: [
+    ["一个下拉框，两组", "合并原来的仓库选择器。上组 Agent 是管理员分配给我的；下组仓库是我的个人 token 能写的（没有 token 时此组为空并提示去设置）。"],
+    ["Agent 项", "显示名字和团队。选中后进入 agent 模式：隐藏分支选择，出现工作区卡片。"],
+    ["仓库项", "选中后进入开发模式：出现分支选择和上下文仓库。个人仓库也在列，颜色弱化。"],
+    ["发送按钮", "没有选对象或提示词为空时置灰。模式和 agent 在创建会话时固定，之后不可改。"],
+  ], states: null },
+  s1pm: { route: "/chat（产品 / 测试视角）", items: [
+    ["只有 Agent 组有内容", "产品 / 测试没有个人 token，仓库组为空，提示'写代码的人去设置里加 token'。他们不需要理解仓库。"],
+    ["仓库组空状态", "不隐藏这一组，是为了让兼任开发的人知道入口在哪。"],
+    ["按钮文案", "没有可写仓库时按钮显示'选择 agent'；两者都有时显示'选择 agent 或仓库'。"],
+  ], states: null },
+  s2: { route: "/chat?repo=…", items: [
+    ["主仓库 + 分支", "和现在一致。主仓库 clone 到 /workspace/<名字>，agent 的工作目录在这里。"],
+    ["上下文仓库按钮（工具栏最右）", "和现有工具栏同一行，显示已选数量，点开勾选。只读、可多选。候选 = 我的 token 能读的仓库 ∪ 平台凭证能读的仓库 − 主仓库。沙箱启动时一起 clone，push 地址被禁用。下次新建任务默认记住上次的选择。"],
+    ["身份提示", "明确告诉用户 commit / PR 用谁的身份。token 失效时这里变成红色警告并禁用发送。"],
+  ], states: null },
+  s3: { route: "/chat?agent=…", items: [
+    ["/ 候选框", "输入 / 立即弹出，按本会话可用范围分组：agent 自带 skill、我的 skill、提示词模板。↑↓ 选择、Tab/Enter 填入、Esc 关闭。发送时平台把 /name 改写成 Pi 的 /skill:name。"],
+    ["agent 模式的工具栏", "没有分支选择器（agent 的仓库各自用默认分支）。模型和思考等级仍可选。"],
+    ["工作区卡片（树状）", "agent → 仓库 / Skill 两组。仓库带权限徽章，用户不可改；'去设置里定制'可改提示词和 skill。"],
+    ["Skill 分支", "平台默认 + 我加的（橙色标'我的'）。被我移除的默认 skill 不显示。"],
+  ], states: null },
+  s4: { route: "/sessions/:id", items: [
+    ["标题栏 · agent 徽章可点击", "橙色徽章显示所用 agent；点开看这次任务实际生效的仓库、skill 和提示词（含个人定制），并可跳去设置。开发模式这里显示主仓库名 + 分支。"],
+    ["工作区栏", "每个仓库一个 chip + 权限徽章，不换行。只读仓库 agent 不能 push（runtime 禁用 push 地址 + 提示词说明）。"],
+    ["身份与分支（! 提示）", "鼠标悬停显示：以谁的身份提交、push 到哪个分支。agent 模式直接 push 到 main（已定）。commit 作者 = 登录人（noreply 邮箱）。"],
+    ["改动侧栏（树状）", "仓库 → 文件。可写仓库可展开看文件改动；只读仓库折叠并标'只读'。"],
+    ["跟进输入框", "同样支持 /。每一轮都是一次新的运行，/ 的展开由 Pi 在沙箱内完成。"],
+  ], states: null },
+  s4dev: { route: "/sessions/:id（开发模式）", items: [
+    ["标题栏", "显示主仓库（蓝色徽章）和分支，即现状。"],
+    ["工作区栏", "每个仓库一个 chip，只带一个权限徽章；主仓库信息已在标题栏，不重复标。身份信息收进右侧 ! 提示。"],
+    ["先读需求再改代码", "这是开发模式引入上下文仓库的核心价值：需求文档和代码在同一个沙箱里。agent 用相对路径 ../team-cookbook-feature 读它们。"],
+    ["改动侧栏（树状）", "主仓库展开显示文件；上下文仓库折叠并标'只读 · 无改动'。push 和 PR 用本人 token，作者是本人。"],
+  ], states: null },
+  s4qa: { route: "/sessions/:id（测试 agent）", items: [
+    ["四个仓库，只有 test-cases 可写", "测试 agent 读代码、需求、kb，把用例写进 cookbook-test-cases。权限由管理员在'管理 › Agent'定义。改动侧栏是树状：可写仓库展开，只读仓库折叠。"],
+    ["/jira-test-doc", "平台 skill 作为 / 命令触发；测试也可以在'我的 agent'里加自己的 skill。"],
+    ["身份（! 提示）", "push 用本人登录 token（App 装在 ct-kb），commit 作者和 push 的人都是 jennyz510。"],
+  ], states: null },
+  s5repo: { route: "/settings#repositories", items: [
+    ["仓库 tab = 现有的 GitHub App 安装页", "保留给自动评审用；列出 App 已安装组织的仓库和自动评审开关。"],
+    ["未安装的组织", "food-truck 等待审批，页面说明开发请改用个人 token，不再把安装 App 作为使用前提。"],
+  ], states: null },
+  s5: { route: "/settings", items: [
+    ["Tab 可点击切换", "账号 / 我的 agent / Skill / 仓库 四个 tab（模型并入账号页下方）。没有被分配 agent 的人也能看到'我的 agent'（空状态）。"],
+    ["个人 token 卡片", "保存时校验：token 属于当前登录账号（否则报错，见'不属于本人'状态）；读出过期时间和权限；探测本人可写的仓库。页面永不回显完整 token。"],
+    ["引导文案", "推荐 classic（repo + workflow，立即可用）；fine-grained 作为范围更小但需审批的选项；SSO 提示。"],
+  ], states: { target: "#pat-card", list: [["none","未绑定"],["ok","有效"],["pending","等待审批"],["expired","已失效"],["mismatch","不属于本人"]] } },
+  s6: { route: "/settings#agents", items: [
+    ["左侧列表", "只列分配给我的 agent；被定制过的显示'已定制'。空状态提示找管理员。"],
+    ["仓库只读展示", "仓库和权限由管理员定义，这里不可改。"],
+    ["提示词覆盖", "默认显示 agent 的基础提示词，可直接编辑为自己的版本；'恢复默认'清空覆盖。只对自己生效；下一个任务开始生效。"],
+    ["Skill 勾选", "列出 agent 默认 skill（可取消）+ 我的 skill + 其他已启用的平台 skill（可添加）。"],
+  ], states: null },
+  s7: { route: "/settings#skills", items: [
+    ["我的 / 平台 分组", "'我的'可增删改，只有自己可见；'平台'只读展示（由管理员发布）。"],
+    ["新建 skill", "名字即 /name，限 a-z0-9-；类型 Skill（SKILL.md）或模板（支持 $1、$ARGUMENTS）。个人 skill 可与平台 skill 同名，运行时个人优先。"],
+    ["编辑器", "Markdown 文本域，单个 ≤ 64KB。保存后在下一个任务生效；开发模式自动带上我的 skill，agent 模式要在'我的 agent'里勾选。"],
+  ], states: null },
+  s8: { route: "/admin/credentials", items: [
+    ["标题旁的 ! 提示", "说明什么时候需要添加 token：每个没装 GitHub App 的组织一个（目前只有 food-truck）。不是按团队，是按组织。装了 App 的组织不需要。"],
+    ["添加 token", "名称 + token，保存即探测：所属账号、过期时间、私有仓库清单、每个仓库只读 / 可写。探测细节不在页面上解释。"],
+    ["凭证卡片 + 仓库权限表", "一行一个仓库，直接显示'只读 / 可写'和使用它的 agent。到期前 14 天标黄，过期标红。"],
+    ["GitHub App 卡片", "ct-kb 装了 App，用户用本人登录读写，这里只显示状态，不存 token。"],
+  ], states: null },
+  s9: { route: "/admin/agents", items: [
+    ["按团队分组", "团队只是 agent 上的标签，用于分组展示；分配仍按人。"],
+    ["仓库 + 权限", "每行一个仓库、一个权限下拉。权限不能超过凭证 / App 能提供的上限。"],
+    ["运行时凭证列", "告诉管理员这个仓库到时候用什么 token：平台凭证的名称，或'用户本人登录'（App 已装的组织）。"],
+    ["添加仓库候选", "只列平台凭证或 App 能到达的仓库，并标明最高权限；到不了的仓库灰显并提示先加凭证。"],
+    ["分配", "按登录名批量输入；平台换成 GitHub 用户 id 存储，对方不用先登录。若某人对可写仓库没有权限（App 路径下），行内标黄提醒。"],
+  ], states: null },
+  s10: { route: "/admin/skills", items: [
+    ["只有启用 / 禁用", "去掉了'全局'概念。想让所有 agent 都带某个 skill，就在每个 agent 的默认 skill 里加上。"],
+    ["来源列", "平台 skill 由管理员在这里新建和编辑。"],
+    ["插件 skill 合并显示", "context7、exa 等插件自带的 skill 也列在这里，可以启用 / 禁用、挂到 agent；内容来自插件包，这里只读。"],
+  ], states: null },
+  s11: { route: "/chat（无任何访问权时）", items: [
+    ["引导卡片", "替换现在的'安装 GitHub App'引导。两条路径并列，不阻塞页面；有了 token 或被分配 agent 后自动消失。"],
+    ["复制申请文案", "复制一段给管理员的申请文案（含自己的登录名），线下发给管理员。"],
+  ], states: null },
+};
+
+const ROLES = {
+  all:   { label: "全部", flow: null },
+  dev:   { label: "开发",   flow: ["s11","s5","s5repo","s1","s2","s4dev","s3","s7"] },
+  pm:    { label: "产品",   flow: ["s11","s1pm","s3","s4","s6","s7"] },
+  qa:    { label: "测试",   flow: ["s11","s1pm","s4qa","s6","s7"] },
+  admin: { label: "管理员", flow: ["s8","s9","s10","s5"] },
+};
+const screens = [...document.querySelectorAll(".screen")];
+const nav = document.getElementById("nav");
+const rolesEl = document.getElementById("roles");
+let role = "all";
+Object.entries(ROLES).forEach(([key, r]) => { const b = document.createElement("button"); b.textContent = r.label; b.dataset.role = key; b.onclick = () => setRole(key); rolesEl.appendChild(b); });
+function setRole(key) {
+  role = key;
+  rolesEl.querySelectorAll("button").forEach((b) => b.classList.toggle("active", b.dataset.role === key));
+  nav.innerHTML = "";
+  const flow = ROLES[key].flow;
+  if (!flow) {
+    let group = null;
+    const ORDER = ["通用", "开发", "产品", "测试", "管理员"];
+    [...screens].sort((a, b) => ORDER.indexOf(a.dataset.group) - ORDER.indexOf(b.dataset.group)).forEach((s) => {
+      if (s.dataset.group !== group) { group = s.dataset.group; const g = document.createElement("span"); g.className = "group"; g.textContent = group; nav.appendChild(g); }
+      const b = document.createElement("button"); b.textContent = s.dataset.title; b.dataset.id = s.dataset.id; b.onclick = () => show(s.dataset.id); nav.appendChild(b);
+    });
+  } else {
+    flow.forEach((id, i) => { const s = screens.find((x) => x.dataset.id === id); const b = document.createElement("button"); b.innerHTML = `<span class="step">${i + 1}</span>${s.dataset.title}`; b.dataset.id = id; b.onclick = () => show(id); nav.appendChild(b); });
+  }
+  const current = screens.find((s) => s.classList.contains("on"));
+  const first = flow ? flow[0] : "s11";
+  show(current && (!flow || flow.includes(current.dataset.id)) ? current.dataset.id : first);
+}
+function visibleOrder() { return ROLES[role].flow ?? [...nav.querySelectorAll("button")].map((b) => b.dataset.id); }
+function show(id) {
+  screens.forEach((s) => s.classList.toggle("on", s.dataset.id === id));
+  nav.querySelectorAll("button").forEach((b) => b.classList.toggle("active", b.dataset.id === id));
+  location.hash = `${role}/${id}`;
+  document.querySelectorAll(".role-banner").forEach((el) => el.remove());
+  if (ROLES[role].flow) { const idx = ROLES[role].flow.indexOf(id); const bn = document.createElement("div"); bn.className = "role-banner"; bn.innerHTML = `<b>${ROLES[role].label}</b> 路径 · 第 ${idx + 1} / ${ROLES[role].flow.length} 步`; document.getElementById("frame").appendChild(bn); }
+  const n = NOTES[id]; const s = screens.find((x) => x.dataset.id === id);
+  let html = `<h3>${s.dataset.title}</h3><div class="route">${n.route}</div><ol>` +
+    n.items.map(([t, d], i) => `<li><span class="n">${i + 1}</span><div><b>${t}</b>${d}</div></li>`).join("") + `</ol>`;
+  if (n.states) {
+    html += `<div class="sec">状态切换</div><div class="states">` + n.states.list.map(([st, label]) => `<button data-st="${st}">${label}</button>`).join("") + `</div>`;
+  }
+  document.getElementById("notes").innerHTML = html;
+  if (n.states) {
+    const btns = document.querySelectorAll(".notes .states button");
+    const apply = (st) => { btns.forEach((b) => b.classList.toggle("active", b.dataset.st === st)); document.querySelectorAll(`${n.states.target} [data-state]`).forEach((el) => { el.style.display = el.dataset.state === st ? "" : "none"; }); };
+    btns.forEach((b) => (b.onclick = () => apply(b.dataset.st)));
+    apply(n.states.list[0][0]);
+  }
+}
+document.querySelectorAll("[data-toggle]").forEach((el) => el.addEventListener("click", (e) => { e.preventDefault(); const t = document.getElementById(el.dataset.toggle); t.style.display = t.style.display === "none" ? "" : "none"; }));
+document.querySelectorAll("[data-go]").forEach((el) => el.addEventListener("click", () => show(el.dataset.go)));
+document.querySelectorAll(".tip").forEach((el) => el.addEventListener("click", () => el.classList.toggle("open")));
+document.getElementById("marksToggle").onchange = (e) => document.getElementById("proto").classList.toggle("hide-marks", !e.target.checked);
+document.getElementById("notesToggle").onchange = (e) => document.getElementById("stage").classList.toggle("no-notes", !e.target.checked);
+document.addEventListener("keydown", (e) => { const order = visibleOrder(); const cur = screens.find((s) => s.classList.contains("on"))?.dataset.id; const i = order.indexOf(cur); if (e.key === "ArrowRight") show(order[Math.min(i + 1, order.length - 1)]); if (e.key === "ArrowLeft") show(order[Math.max(i - 1, 0)]); });
+(() => { const [r, id] = location.hash.slice(1).split("/"); if (ROLES[r]) { if (id && NOTES[id]) { show(id); } setRole(r); } else { setRole("all"); } })();
+</script>
+</body>
+</html>

@@ -13,7 +13,10 @@ Decides what runs and when, resolves connected identities, mints run credentials
 | `index.ts` | bootstrap: HTTP surface + reconciler in one process, graceful shutdown |
 | `config.ts` | **the only file in the repo that reads `process.env`** |
 | `logger.ts` | structured JSON lines; level is passed in, never read from globals |
-| `db/schema.ts` | application users, browser sessions, execution state, VCS connections, plugin catalog, and OTLP delivery state |
+| `auth/operator.ts` | who counts as an operator (`OPERATOR_GITHUB_LOGINS`) and the `requireOperator` middleware |
+| `db/schema.ts` | application users, browser sessions, execution state, plugin catalog, and OTLP delivery state |
+| `db/schema-credentials.ts` | per-user VCS connections, OAuth state, and operator-managed platform credentials |
+| `db/platform-credentials.ts` | reads and writes of platform credentials and their probed per-repository access |
 | `db/sessions.ts` | ordered turns, Pi checkpoints, retention state, and provider checkpoint ownership |
 | `db/runs.ts` | every write to a run, each a single guarded statement |
 | `db/environments.ts` | per-user, per-repository sandbox image mappings |
@@ -33,16 +36,21 @@ Decides what runs and when, resolves connected identities, mints run credentials
 | `observability.ts` | projects completed run journals into vendor-neutral OTLP traces from the trusted side |
 | `observability-projection.ts` | reconstructs run, step, turn, and tool span nesting from the durable journal |
 | `observability-content.ts` | bounded content attributes for prompts, outputs, reasoning, and tool data |
-| `http/meta.ts` | what the dashboard needs to render itself |
-| `http/vcs.ts` | OAuth connect callbacks and connection management |
+| `http/meta.ts` | what the dashboard needs to render itself, including the repositories a user may start tasks on |
+| `http/vcs.ts` | OAuth connect callbacks, connection management, and the personal access token |
+| `http/admin.ts` | operator-only administration: platform credentials |
 | `plugins/catalog.ts` | resolves effective plugins for a run and composes skills plus MCP |
 | `plugins/marketplace.ts` | publish, review, install, configure, and audit operations |
 | `plugins/oauth.ts` | host-mediated MCP OAuth discovery, registration, and PKCE |
 | `reconcile/loop.ts` | the one loop that repairs durable state |
 | `reconcile/provision.ts` | queued → a sandbox is working on it, as a short transaction |
-| `secrets/broker.ts` | shapes the credentials one run needs, and nothing more |
+| `secrets/broker.ts` | shapes the credentials one run needs, and nothing more; sets the git author to the signed-in user |
 | `vcs/connections.ts` | encrypted connection storage, refresh, and provider resolution |
+| `vcs/personal-token.ts` | a developer's own GitHub token: ownership check, status, storage |
+| `vcs/platform-credentials.ts` | operator tokens for agents, probed per repository for read or write |
+| `vcs/repository-access.ts` | which credential a user may use for a repository, and whether it grants read or write |
 | `test-support.ts` | shared integration-test setup |
+| `test-support-github.ts` | a fake GitHub over `fetch`, keyed by token, for credential tests |
 
 ## Invariants
 
