@@ -36,6 +36,7 @@ export function createApp(deps: Deps): Hono<AppEnv> {
     c.set("config", deps.config);
     c.set("database", deps.database);
     c.set("log", deps.log);
+    c.set("fetchImpl", deps.fetchImpl ?? fetch);
     c.set(
       "user",
       await getAppUserForSession(

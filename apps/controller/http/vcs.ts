@@ -1,17 +1,63 @@
 import { type Context, Hono } from "hono";
+import { z } from "zod";
 import {
   beginVcsConnection,
   disconnectVcsConnection,
   finishVcsConnection,
   listConnectionSummaries,
 } from "../vcs/connections";
+import {
+  deletePersonalToken,
+  getPersonalTokenStatus,
+  PersonalTokenError,
+  savePersonalToken,
+} from "../vcs/personal-token";
+import { requireAuthenticatedUser } from "./auth";
 import type { AppEnv } from "./deps";
 import { redirectToOAuthStart, takeOAuthCallback } from "./oauth-cookie";
 
 const OAUTH_STATE_COOKIE = "pca_vcs_oauth_state";
+const personalTokenSchema = z.object({ token: z.string().trim().min(20).max(400) });
 
 export function vcsRoutes(): Hono<AppEnv> {
   const app = new Hono<AppEnv>();
+
+  app.use("/github/pat", requireAuthenticatedUser);
+
+  app.get("/github/pat", async (c) => {
+    const user = c.get("user");
+    if (!user) return c.json({ error: "authentication required" }, 401);
+    return c.json(
+      await getPersonalTokenStatus(c.get("database"), c.get("config"), user, {
+        fetchImpl: c.get("fetchImpl"),
+      }),
+    );
+  });
+
+  app.put("/github/pat", async (c) => {
+    const user = c.get("user");
+    if (!user) return c.json({ error: "authentication required" }, 401);
+    const parsed = personalTokenSchema.safeParse(await c.req.json().catch(() => null));
+    if (!parsed.success) return c.json({ error: "a token is required" }, 400);
+    try {
+      return c.json(
+        await savePersonalToken(c.get("database"), c.get("config"), user, parsed.data.token, {
+          fetchImpl: c.get("fetchImpl"),
+        }),
+      );
+    } catch (cause) {
+      if (cause instanceof PersonalTokenError) return c.json({ error: cause.message }, 400);
+      c.get("log").warn("personal token check failed", { error: cause });
+      return c.json({ error: `GitHub request failed: ${errorMessage(cause)}` }, 502);
+    }
+  });
+
+  app.delete("/github/pat", async (c) => {
+    const user = c.get("user");
+    if (!user) return c.json({ error: "authentication required" }, 401);
+    await deletePersonalToken(c.get("database"), user);
+    return c.json({ ok: true });
+  });
 
   app.get("/connections", async (c) => {
     const user = c.get("user");

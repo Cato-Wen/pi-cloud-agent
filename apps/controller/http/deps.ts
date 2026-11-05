@@ -18,6 +18,10 @@ export interface Deps {
   /** Resolve a provider recorded on a session for deletion cleanup. */
   createSandboxProvider?: (name: string) => SandboxProvider;
   createGithubReviewReader?: (token: string) => GithubReviewReader;
+  /** Outbound HTTP for GitHub token checks; tests substitute a fake. Defaults to global fetch. */
+  fetchImpl?: typeof fetch;
 }
 
-export type AppEnv = { Variables: Deps & { user: AppUserRow | null } };
+export type AppEnv = {
+  Variables: Deps & { user: AppUserRow | null; fetchImpl: typeof fetch };
+};

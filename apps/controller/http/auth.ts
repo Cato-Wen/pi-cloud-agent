@@ -1,8 +1,10 @@
+import { PAT_PROVIDER } from "@pi-cloud-agent/protocol";
 import { type Context, Hono, type Next } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { isOperator } from "../auth/operator";
 import { createWebSession, deleteWebSession } from "../db/auth";
 import type { AppUserRow } from "../db/schema";
+import { getVcsConnection } from "../db/vcs-connections";
 import { beginVcsConnection, finishGithubLogin } from "../vcs/connections";
 import type { AppEnv } from "./deps";
 
@@ -81,7 +83,7 @@ export function authRoutes(): Hono<AppEnv> {
     }
   });
 
-  app.get("/me", (c) => {
+  app.get("/me", async (c) => {
     const user = c.get("user");
     if (!user && !c.get("config").auth.requireUser) {
       return c.json({
@@ -99,6 +101,7 @@ export function authRoutes(): Hono<AppEnv> {
       displayName: user.displayName,
       avatarUrl: user.avatarUrl,
       isOperator: isOperator(c.get("config"), user.login),
+      hasPat: Boolean(await getVcsConnection(c.get("database"), user.id, PAT_PROVIDER)),
     });
   });
 

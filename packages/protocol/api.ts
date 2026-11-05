@@ -142,6 +142,28 @@ export interface AppUserSummary {
   displayName: string;
   avatarUrl: string | null;
   isOperator?: boolean;
+  /** Whether a personal GitHub token is bound; drives onboarding, not access. */
+  hasPat?: boolean;
+}
+
+/** `vcs_connections.provider` for a user's personal GitHub token. */
+export const PAT_PROVIDER = "github-pat";
+
+export interface PersonalTokenStatus {
+  connected: boolean;
+  kind: "classic" | "fine-grained" | "unknown" | null;
+  login: string | null;
+  last4: string | null;
+  /** Classic scopes only; fine-grained tokens report none. */
+  scopes: string[];
+  /** ISO timestamp, or null when the token does not expire. */
+  expiresAt: string | null;
+  /** `invalid` means GitHub rejects the stored token now. */
+  state: "none" | "valid" | "invalid";
+  /** Fine-grained token that sees no private repository: likely awaiting org approval. */
+  pendingHint: boolean;
+  /** Repositories the token's account can push to, by full name. */
+  writableRepos: string[];
 }
 
 export interface PluginCatalogEntry {
