@@ -2,7 +2,7 @@ import type { VCSProvider } from "@pi-cloud-agent/protocol";
 import { z } from "zod";
 import { createAzureDevOpsProvider } from "./azure-devops";
 import { createGitHubProvider } from "./github";
-import { fetchJson } from "./http";
+import { type ForgeHttpDeps, fetchJson } from "./http";
 
 interface OAuthToken {
   accessToken: string;
@@ -35,13 +35,17 @@ const GITHUB_TOKEN_URL = "https://github.com/login/oauth/access_token";
 const GITHUB_API_URL = "https://api.github.com";
 const AZURE_AUTHORIZE_URL = "https://login.microsoftonline.com";
 
-export function createVcsOAuthProvider(name: string, env: Env): VcsOAuthProvider {
-  if (name === "github") return createGitHubOAuthProvider(env);
-  if (name === "azure-devops") return createAzureOAuthProvider(env);
+export function createVcsOAuthProvider(
+  name: string,
+  env: Env,
+  deps: ForgeHttpDeps = {},
+): VcsOAuthProvider {
+  if (name === "github") return createGitHubOAuthProvider(env, deps);
+  if (name === "azure-devops") return createAzureOAuthProvider(env, deps);
   throw new Error(`Unknown VCS provider "${name}".`);
 }
 
-function createGitHubOAuthProvider(env: Env): VcsOAuthProvider {
+function createGitHubOAuthProvider(env: Env, deps: ForgeHttpDeps): VcsOAuthProvider {
   const config = z
     .object({
       clientId: z.string().min(1),
@@ -70,21 +74,29 @@ function createGitHubOAuthProvider(env: Env): VcsOAuthProvider {
       return url.toString();
     },
     exchangeCode(code, codeVerifier) {
-      return exchangeToken(GITHUB_TOKEN_URL, {
-        client_id: config.clientId,
-        client_secret: config.clientSecret,
-        code,
-        redirect_uri: config.redirectUri,
-        code_verifier: codeVerifier,
-      });
+      return exchangeToken(
+        GITHUB_TOKEN_URL,
+        {
+          client_id: config.clientId,
+          client_secret: config.clientSecret,
+          code,
+          redirect_uri: config.redirectUri,
+          code_verifier: codeVerifier,
+        },
+        deps,
+      );
     },
     refreshToken(refreshToken) {
-      return exchangeToken(GITHUB_TOKEN_URL, {
-        client_id: config.clientId,
-        client_secret: config.clientSecret,
-        grant_type: "refresh_token",
-        refresh_token: refreshToken,
-      });
+      return exchangeToken(
+        GITHUB_TOKEN_URL,
+        {
+          client_id: config.clientId,
+          client_secret: config.clientSecret,
+          grant_type: "refresh_token",
+          refresh_token: refreshToken,
+        },
+        deps,
+      );
     },
     async identify(accessToken) {
       const user = await fetchJson<{
@@ -106,7 +118,7 @@ function createGitHubOAuthProvider(env: Env): VcsOAuthProvider {
   };
 }
 
-function createAzureOAuthProvider(env: Env): VcsOAuthProvider {
+function createAzureOAuthProvider(env: Env, deps: ForgeHttpDeps): VcsOAuthProvider {
   const config = z
     .object({
       clientId: z.string().min(1),
@@ -144,24 +156,32 @@ function createAzureOAuthProvider(env: Env): VcsOAuthProvider {
       return url.toString();
     },
     exchangeCode(code, codeVerifier) {
-      return exchangeToken(tokenUrl, {
-        client_id: config.clientId,
-        client_secret: config.clientSecret,
-        grant_type: "authorization_code",
-        code,
-        redirect_uri: config.redirectUri,
-        scope,
-        code_verifier: codeVerifier,
-      });
+      return exchangeToken(
+        tokenUrl,
+        {
+          client_id: config.clientId,
+          client_secret: config.clientSecret,
+          grant_type: "authorization_code",
+          code,
+          redirect_uri: config.redirectUri,
+          scope,
+          code_verifier: codeVerifier,
+        },
+        deps,
+      );
     },
     refreshToken(refreshToken) {
-      return exchangeToken(tokenUrl, {
-        client_id: config.clientId,
-        client_secret: config.clientSecret,
-        grant_type: "refresh_token",
-        refresh_token: refreshToken,
-        scope,
-      });
+      return exchangeToken(
+        tokenUrl,
+        {
+          client_id: config.clientId,
+          client_secret: config.clientSecret,
+          grant_type: "refresh_token",
+          refresh_token: refreshToken,
+          scope,
+        },
+        deps,
+      );
     },
     async identify(accessToken) {
       const profile = await fetchJson<{ id?: string; displayName?: string }>(
@@ -182,7 +202,11 @@ function createAzureOAuthProvider(env: Env): VcsOAuthProvider {
   };
 }
 
-async function exchangeToken(url: string, values: Record<string, string>): Promise<OAuthToken> {
+async function exchangeToken(
+  url: string,
+  values: Record<string, string>,
+  deps: ForgeHttpDeps,
+): Promise<OAuthToken> {
   const result = await fetchJson<{
     access_token?: string;
     refresh_token?: string;
@@ -194,6 +218,7 @@ async function exchangeToken(url: string, values: Record<string, string>): Promi
       Accept: "application/json",
     },
     body: new URLSearchParams(values).toString(),
+    fetchImpl: deps.fetchImpl,
   });
   if (!result.access_token) throw new Error("OAuth provider did not return an access token");
   return {

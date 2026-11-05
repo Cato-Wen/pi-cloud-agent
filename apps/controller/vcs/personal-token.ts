@@ -1,6 +1,7 @@
 import { PAT_PROVIDER, type PersonalTokenStatus } from "@pi-cloud-agent/protocol";
 import {
   type GithubTokenInfo,
+  GithubTokenRejectedError,
   githubTokenKind,
   inspectGithubToken,
   listGithubTokenRepositories,
@@ -20,10 +21,13 @@ import { decryptSecret, encryptSecret } from "../secrets/crypto";
  * pull requests carry their identity without a GitHub App installation.
  *
  * The one hard rule is that the token must belong to the signed-in account.
- * Anything else — a token GitHub has since revoked, a fine-grained token still
- * waiting for an organization owner — is reported, not rejected.
+ * A token GitHub has since revoked is reported as invalid; a fine-grained
+ * token still waiting for an organization owner is reported as a hint. A
+ * GitHub outage is neither — it propagates, so nobody is told to replace a
+ * token that is fine.
  */
 
+/** The user's input is at fault: wrong account, missing scope, or a token GitHub refuses. */
 export class PersonalTokenError extends Error {}
 
 interface Deps {
@@ -37,7 +41,14 @@ export async function savePersonalToken(
   token: string,
   deps: Deps,
 ): Promise<PersonalTokenStatus> {
-  const info = await inspectGithubToken(token, deps);
+  const info = await inspectGithubToken(token, deps).catch((cause: unknown) => {
+    if (cause instanceof GithubTokenRejectedError) {
+      throw new PersonalTokenError(
+        "GitHub rejected this token. Check that you copied it fully.",
+      );
+    }
+    throw cause;
+  });
   if (info.accountId !== user.githubUserId) {
     throw new PersonalTokenError(
       `This token belongs to another GitHub account (${info.login}), not ${user.login}.`,
@@ -71,7 +82,8 @@ export async function getPersonalTokenStatus(
   try {
     const info = await inspectGithubToken(stored.token, deps);
     return describeToken(stored.token, info, deps);
-  } catch {
+  } catch (cause) {
+    if (!(cause instanceof GithubTokenRejectedError)) throw cause;
     return {
       ...disconnected(),
       connected: true,

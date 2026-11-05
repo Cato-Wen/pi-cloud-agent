@@ -49,6 +49,7 @@ export type {
   RepoAccess,
 } from "./github-token";
 export {
+  GithubTokenRejectedError,
   githubTokenKind,
   inspectGithubToken,
   listGithubTokenRepositories,

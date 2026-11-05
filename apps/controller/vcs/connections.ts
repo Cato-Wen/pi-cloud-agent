@@ -135,12 +135,23 @@ export async function getVcsProvider(
   );
 }
 
+export interface AccessTokenOptions {
+  /**
+   * Refresh when the token would expire within this window. A run that will
+   * hold the token for an hour asks for an hour; dashboard reads use the
+   * default one-minute slack.
+   */
+  minValidityMs?: number;
+  fetchImpl?: typeof fetch;
+}
+
 /** Resolve the current user token, refreshing the stored OAuth credential when needed. */
 export async function getVcsAccessToken(
   database: Database,
   config: Config,
   provider: string,
   userId: string | null,
+  options: AccessTokenOptions = {},
 ): Promise<string> {
   if (!userId) return "";
   const row = await getVcsConnection(database, userId, provider);
@@ -150,9 +161,16 @@ export async function getVcsAccessToken(
   const refreshToken = row.refreshToken
     ? decryptSecret(row.refreshToken, config.vcs.encryptionKey)
     : null;
-  if (row.expiresAt && row.expiresAt.getTime() <= Date.now() + TOKEN_REFRESH_SLACK_MS) {
+  const window = Math.max(options.minValidityMs ?? 0, TOKEN_REFRESH_SLACK_MS);
+  const expiresWithinWindow =
+    row.expiresAt !== null && row.expiresAt.getTime() <= Date.now() + window;
+  const expired =
+    row.expiresAt !== null && row.expiresAt.getTime() <= Date.now() + TOKEN_REFRESH_SLACK_MS;
+  if (expiresWithinWindow && (refreshToken || expired)) {
     if (!refreshToken) throw new Error(`${provider} connection needs to be reconnected`);
-    const oauth = createVcsOAuthProvider(provider, config.env);
+    const oauth = createVcsOAuthProvider(provider, config.env, {
+      fetchImpl: options.fetchImpl,
+    });
     const token = await oauth.refreshToken(refreshToken);
     await updateVcsConnectionToken(database, row.id, {
       accessToken: encryptSecret(token.accessToken, config.vcs.encryptionKey),

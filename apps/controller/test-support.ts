@@ -143,6 +143,45 @@ export async function grantRepositoryAccess(
   });
 }
 
+export interface BoundTestUser {
+  database: Database;
+  userId: string;
+  cookie: string;
+  modelConnectionId: string;
+  /** Browser-style request headers for the seeded session. */
+  headers: Record<string, string>;
+}
+
+/**
+ * A database plus a freshly seeded, signed-in user before every test. Returns
+ * a getter because the values only exist once the hooks have run.
+ */
+export function bindTestUser(config: Config = testConfig()): () => BoundTestUser {
+  let bound: BoundTestUser | null = null;
+  bindTestDatabase((database) => {
+    bound = { database, userId: "", cookie: "", modelConnectionId: "", headers: {} };
+  });
+  beforeEach(async () => {
+    if (!bound) throw new Error("test database is not bound");
+    const seeded = await seedTestUser(bound.database, config);
+    bound = { ...bound, ...seeded, headers: sessionHeaders(seeded.cookie) };
+  });
+  return () => {
+    if (!bound) throw new Error("test user is not bound yet");
+    return bound;
+  };
+}
+
+/** Browser-style request headers for a seeded session cookie. */
+export function sessionHeaders(cookie: string): Record<string, string> {
+  return { Cookie: `pca_session=${cookie}`, "Content-Type": "application/json" };
+}
+
+/** Typed JSON body, so a renamed field fails to compile rather than to assert. */
+export async function jsonBody<T>(response: Response): Promise<T> {
+  return (await response.json()) as T;
+}
+
 export function withTestModel(body: unknown, modelConnectionId: string): unknown {
   if (typeof body !== "object" || body === null || Array.isArray(body)) return body;
   return {

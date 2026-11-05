@@ -144,8 +144,10 @@ export function createCredentialBroker(
       Object.assign(secrets, repository.secrets);
       Object.assign(env, repository.env);
 
-      const user = await getAppUserById(database, userId);
-      if (user) Object.assign(env, gitAuthorEnv(user));
+      if (provider === "github") {
+        const user = await getAppUserById(database, userId);
+        if (user) Object.assign(env, gitAuthorEnv(user));
+      }
 
       env[SANDBOX_ENV.modelAuthType] = model.authType;
       return { secrets, env, model };
@@ -153,7 +155,11 @@ export function createCredentialBroker(
   };
 }
 
-/** Write access first; a read-only credential still lets the agent analyze code. */
+/**
+ * A task's primary repository must be writable by a credential the user owns.
+ * There is deliberately no read-only fallback here: a run that silently
+ * switched to someone else's token would fail at push time with no warning.
+ */
 async function mintGithubRepositoryToken(
   config: Config,
   database: Database,
@@ -163,13 +169,9 @@ async function mintGithubRepositoryToken(
 ): Promise<Secret> {
   const user = await getAppUserById(database, userId);
   if (!user) throw new Error("run user no longer exists");
-  const write = await resolveRepositoryAccess(database, config, user, repoFullName, "write", {
+  const access = await resolveRepositoryAccess(database, config, user, repoFullName, "write", {
     fetchImpl,
   });
-  if (write.mode !== "none") return write.token;
-  const read = await resolveRepositoryAccess(database, config, user, repoFullName, "read", {
-    fetchImpl,
-  });
-  if (read.mode !== "none") return read.token;
-  throw new Error(write.reason);
+  if (access.mode === "none") throw new Error(access.reason);
+  return access.token;
 }

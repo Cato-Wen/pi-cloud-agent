@@ -8,7 +8,7 @@
  * level.
  */
 
-export interface FakeGithubRepo {
+interface FakeGithubRepo {
   full_name: string;
   private: boolean;
   push: boolean;
@@ -32,11 +32,23 @@ export interface FakeGithubSpec {
 
 type SpecInput = FakeGithubSpec | Record<string, FakeGithubSpec>;
 
-export function fakeGithubFetch(spec: SpecInput): typeof fetch {
+interface FakeGithubOptions {
+  /** Answer for the OAuth refresh exchange (`POST /login/oauth/access_token`). */
+  oauthRefresh?: { access_token: string; refresh_token?: string; expires_in?: number };
+  /** Every request answers this status, as during a GitHub outage. */
+  status?: number;
+}
+
+export function fakeGithubFetch(
+  spec: SpecInput,
+  options: FakeGithubOptions = {},
+): typeof fetch {
   return (async (input: string | URL | Request, init?: RequestInit) => {
     const url = new URL(
       typeof input === "string" ? input : input instanceof URL ? input : input.url,
     );
+    const global = answerUnauthenticated(options, url);
+    if (global) return global;
     const headers = new Headers(
       init?.headers ?? (input instanceof Request ? input.headers : {}),
     );
@@ -48,6 +60,17 @@ export function fakeGithubFetch(spec: SpecInput): typeof fetch {
       json(404, { message: "Not Found" })
     );
   }) as typeof fetch;
+}
+
+/** Outage and the OAuth refresh exchange are answered before any token is looked at. */
+function answerUnauthenticated(options: FakeGithubOptions, url: URL): Response | null {
+  if (options.status) return json(options.status, { message: "GitHub is unavailable" });
+  if (url.host === "github.com" && url.pathname === "/login/oauth/access_token") {
+    return options.oauthRefresh
+      ? json(200, options.oauthRefresh)
+      : json(400, { error: "bad_refresh_token" });
+  }
+  return null;
 }
 
 function specForToken(spec: SpecInput, token: string | null): FakeGithubSpec | undefined {

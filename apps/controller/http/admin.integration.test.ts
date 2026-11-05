@@ -2,15 +2,8 @@ import type {
   PlatformCredentialSummary,
   PlatformCredentialsResponse,
 } from "@pi-cloud-agent/protocol";
-import { afterAll, beforeAll, beforeEach, expect, it } from "vitest";
-import { closeDatabase, type Database } from "../db/client";
-import {
-  resetTables,
-  seedTestUser,
-  setupTestDatabase,
-  silentLogger,
-  testConfig,
-} from "../test-support";
+import { expect, it } from "vitest";
+import { bindTestUser, jsonBody as json, silentLogger, testConfig } from "../test-support";
 import { type FakeGithubSpec, fakeGithubFetch } from "../test-support-github";
 import { createApp } from "./app";
 
@@ -35,31 +28,18 @@ const github: Record<string, FakeGithubSpec> = {
   },
 };
 
-let database: Database;
-let cookie: string;
+const bound = bindTestUser();
 
-beforeAll(() => {
-  database = setupTestDatabase();
-});
-beforeEach(async () => {
-  await resetTables(database);
-  cookie = (await seedTestUser(database, testConfig())).cookie;
-});
-afterAll(() => closeDatabase(database));
-
-const operatorApp = () =>
+const appAs = (operator: boolean) =>
   createApp({
-    config: testConfig({ OPERATOR_GITHUB_LOGINS: "default-test-user" }),
-    database,
+    config: testConfig(operator ? { OPERATOR_GITHUB_LOGINS: "default-test-user" } : {}),
+    database: bound().database,
     log: silentLogger(),
     fetchImpl: fakeGithubFetch(github),
   });
+const operatorApp = () => appAs(true);
 
-const headers = () => ({ Cookie: `pca_session=${cookie}`, "Content-Type": "application/json" });
-
-async function json<T>(response: Response): Promise<T> {
-  return (await response.json()) as T;
-}
+const headers = () => bound().headers;
 
 async function create(app: ReturnType<typeof createApp>, label: string, token: string) {
   const response = await app.request("/admin/credentials", {
@@ -72,13 +52,7 @@ async function create(app: ReturnType<typeof createApp>, label: string, token: s
 }
 
 it("refuses non-operators", async () => {
-  const app = createApp({
-    config: testConfig(),
-    database,
-    log: silentLogger(),
-    fetchImpl: fakeGithubFetch(github),
-  });
-  const response = await app.request("/admin/credentials", { headers: headers() });
+  const response = await appAs(false).request("/admin/credentials", { headers: headers() });
   expect(response.status).toBe(403);
 });
 

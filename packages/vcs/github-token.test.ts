@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  GithubTokenRejectedError,
   githubTokenKind,
   inspectGithubToken,
   listGithubTokenRepositories,
@@ -56,11 +57,25 @@ describe("GitHub token inspection", () => {
     });
   });
 
-  it("rejects a token GitHub does not accept", async () => {
+  it("rejects a token GitHub does not accept with a distinct error", async () => {
     const { fetchImpl } = fakeFetch({
       "https://api.github.com/user": { status: 401, body: { message: "Bad credentials" } },
     });
-    await expect(inspectGithubToken("ghp_bad", { fetchImpl })).rejects.toThrow(/rejected/);
+    await expect(inspectGithubToken("ghp_bad", { fetchImpl })).rejects.toBeInstanceOf(
+      GithubTokenRejectedError,
+    );
+    await expect(listGithubTokenRepositories("ghp_bad", { fetchImpl })).rejects.toBeInstanceOf(
+      GithubTokenRejectedError,
+    );
+  });
+
+  it("does not call a token rejected when GitHub itself is failing", async () => {
+    const { fetchImpl } = fakeFetch({
+      "https://api.github.com/user": { status: 503, body: { message: "down" } },
+    });
+    const failure = await inspectGithubToken("ghp_fine", { fetchImpl }).catch((cause) => cause);
+    expect(failure).toBeInstanceOf(Error);
+    expect(failure).not.toBeInstanceOf(GithubTokenRejectedError);
   });
 });
 

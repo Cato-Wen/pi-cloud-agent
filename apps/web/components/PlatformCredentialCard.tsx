@@ -5,9 +5,9 @@ import { KeyRoundIcon, RefreshCwIcon } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { StatusTag } from "@/components/ui/status-tag";
 import { api } from "@/lib/api";
-
-const EXPIRY_WARNING_DAYS = 14;
+import { describeExpiry } from "@/lib/expiry";
 
 type Notify = (message: string, kind: "success" | "error") => void;
 
@@ -57,11 +57,11 @@ export function PlatformCredentialCard({
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="text-sm font-medium">{credential.label}</h3>
             {expiry.expired ? (
-              <Tag tone="err">Expired</Tag>
+              <StatusTag tone="err">Expired</StatusTag>
             ) : expiry.soon ? (
-              <Tag tone="warn">Expires {expiry.label}</Tag>
+              <StatusTag tone="warn">Expires {expiry.label}</StatusTag>
             ) : (
-              <Tag tone="ok">Valid</Tag>
+              <StatusTag tone="ok">Valid</StatusTag>
             )}
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
@@ -157,9 +157,9 @@ export function PlatformCredentialCard({
                 <td className="py-1.5 pr-3 font-mono">{entry.repo}</td>
                 <td className="py-1.5">
                   {entry.access === "write" ? (
-                    <Tag tone="ok">write</Tag>
+                    <StatusTag tone="ok">write</StatusTag>
                   ) : (
-                    <Tag tone="muted">read-only</Tag>
+                    <StatusTag tone="muted">read-only</StatusTag>
                   )}
                 </td>
               </tr>
@@ -186,47 +186,6 @@ export function PlatformCredentialCard({
       />
     </section>
   );
-}
-
-function Tag({
-  tone,
-  children,
-}: {
-  tone: "ok" | "warn" | "err" | "muted";
-  children: React.ReactNode;
-}) {
-  const classes = {
-    ok: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
-    warn: "border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-300",
-    err: "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300",
-    muted: "border-border bg-muted text-muted-foreground",
-  }[tone];
-  return (
-    <span
-      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ${classes}`}
-    >
-      {children}
-    </span>
-  );
-}
-
-function describeExpiry(expiresAt: string | null): {
-  label: string;
-  soon: boolean;
-  expired: boolean;
-} {
-  if (!expiresAt) return { label: "never", soon: false, expired: false };
-  const date = new Date(expiresAt);
-  const days = Math.ceil((date.getTime() - Date.now()) / 86_400_000);
-  return {
-    label: date.toLocaleDateString(undefined, {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    }),
-    soon: days <= EXPIRY_WARNING_DAYS,
-    expired: days <= 0,
-  };
 }
 
 function relative(iso: string): string {

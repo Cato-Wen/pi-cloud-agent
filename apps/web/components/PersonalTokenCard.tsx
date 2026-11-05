@@ -5,15 +5,14 @@ import { KeyRoundIcon } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { StatusTag, type StatusTone } from "@/components/ui/status-tag";
 import { api, invalidateRepositoryCache } from "@/lib/api";
+import { describeExpiry } from "@/lib/expiry";
 
 /** Fired after a personal token is saved or removed, so pickers and onboarding refresh. */
 export const PERSONAL_TOKEN_CHANGED = "personal-token-changed";
 
-const EXPIRY_WARNING_DAYS = 14;
-
 type Notify = (message: string, kind: "success" | "error") => void;
-type Tone = "ok" | "warn" | "err";
 
 /**
  * A developer's own GitHub token: the credential that lets tasks commit, push
@@ -202,7 +201,7 @@ function TokenStatus({ status }: { status: PersonalTokenStatus }) {
   return (
     <div className="mt-3 space-y-2 text-xs">
       <p className="flex flex-wrap items-center gap-2 text-muted-foreground">
-        <Badge tone={badge.tone}>{badge.text}</Badge>
+        <StatusTag tone={badge.tone}>{badge.text}</StatusTag>
         <span>{summaryLine(status, expiry.label)}</span>
       </p>
       <StatusDetail status={status} />
@@ -213,7 +212,7 @@ function TokenStatus({ status }: { status: PersonalTokenStatus }) {
 function statusBadge(
   status: PersonalTokenStatus,
   expiry: { label: string; soon: boolean },
-): { text: string; tone: Tone } {
+): { text: string; tone: StatusTone } {
   if (status.state === "invalid") return { text: "Invalid or expired", tone: "err" };
   if (status.pendingHint) return { text: "Waiting for approval", tone: "warn" };
   if (expiry.soon) return { text: `Expires ${expiry.label}`, tone: "warn" };
@@ -285,35 +284,6 @@ function CreationGuide() {
       </ol>
     </details>
   );
-}
-
-function Badge({ tone, children }: { tone: Tone; children: React.ReactNode }) {
-  const classes = {
-    ok: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
-    warn: "border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-300",
-    err: "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300",
-  }[tone];
-  return (
-    <span
-      className={`inline-flex items-center rounded-full border px-2 py-0.5 font-medium ${classes}`}
-    >
-      {children}
-    </span>
-  );
-}
-
-function describeExpiry(expiresAt: string | null): { label: string; soon: boolean } {
-  if (!expiresAt) return { label: "never", soon: false };
-  const date = new Date(expiresAt);
-  const days = Math.ceil((date.getTime() - Date.now()) / 86_400_000);
-  return {
-    label: date.toLocaleDateString(undefined, {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    }),
-    soon: days <= EXPIRY_WARNING_DAYS,
-  };
 }
 
 function detail(cause: unknown): string {

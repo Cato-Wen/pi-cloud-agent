@@ -27,11 +27,16 @@ export function vcsRoutes(): Hono<AppEnv> {
   app.get("/github/pat", async (c) => {
     const user = c.get("user");
     if (!user) return c.json({ error: "authentication required" }, 401);
-    return c.json(
-      await getPersonalTokenStatus(c.get("database"), c.get("config"), user, {
-        fetchImpl: c.get("fetchImpl"),
-      }),
-    );
+    try {
+      return c.json(
+        await getPersonalTokenStatus(c.get("database"), c.get("config"), user, {
+          fetchImpl: c.get("fetchImpl"),
+        }),
+      );
+    } catch (cause) {
+      c.get("log").warn("personal token status failed", { error: cause });
+      return c.json({ error: `GitHub request failed: ${errorMessage(cause)}` }, 502);
+    }
   });
 
   app.put("/github/pat", async (c) => {

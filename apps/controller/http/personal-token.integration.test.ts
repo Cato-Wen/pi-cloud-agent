@@ -1,13 +1,6 @@
 import type { AppUserSummary, PersonalTokenStatus } from "@pi-cloud-agent/protocol";
-import { afterAll, beforeAll, beforeEach, expect, it } from "vitest";
-import { closeDatabase, type Database } from "../db/client";
-import {
-  resetTables,
-  seedTestUser,
-  setupTestDatabase,
-  silentLogger,
-  testConfig,
-} from "../test-support";
+import { expect, it } from "vitest";
+import { bindTestUser, jsonBody as json, silentLogger, testConfig } from "../test-support";
 import { type FakeGithubSpec, fakeGithubFetch } from "../test-support-github";
 import { createApp } from "./app";
 
@@ -24,32 +17,17 @@ const ownToken: FakeGithubSpec = {
   ],
 };
 
-let database: Database;
-let cookie: string;
+const bound = bindTestUser();
 
-beforeAll(() => {
-  database = setupTestDatabase();
-});
-beforeEach(async () => {
-  await resetTables(database);
-  cookie = (await seedTestUser(database, testConfig())).cookie;
-});
-afterAll(() => closeDatabase(database));
-
-function appWith(spec: FakeGithubSpec | Record<string, FakeGithubSpec>) {
-  return createApp({
+const appWith = (spec: FakeGithubSpec | Record<string, FakeGithubSpec>, status?: number) =>
+  createApp({
     config: testConfig(),
-    database,
+    database: bound().database,
     log: silentLogger(),
-    fetchImpl: fakeGithubFetch(spec),
+    fetchImpl: fakeGithubFetch(spec, { status }),
   });
-}
 
-async function json<T>(response: Response): Promise<T> {
-  return (await response.json()) as T;
-}
-
-const headers = () => ({ Cookie: `pca_session=${cookie}`, "Content-Type": "application/json" });
+const headers = () => bound().headers;
 
 const put = (app: ReturnType<typeof createApp>, token: string) =>
   app.request("/vcs/github/pat", {
@@ -132,4 +110,18 @@ it("removes the token", async () => {
   const body = await json<PersonalTokenStatus>(await get(app));
   expect(body.connected).toBe(false);
   expect(body.state).toBe("none");
+});
+
+it("answers 400, not 502, when GitHub rejects the pasted token", async () => {
+  const app = appWith({ ...ownToken, rejectToken: true });
+  const saved = await put(app, TOKEN);
+  expect(saved.status).toBe(400);
+  expect((await json<{ error: string }>(saved)).error).toMatch(/rejected/);
+});
+
+it("does not call a stored token invalid while GitHub is unavailable", async () => {
+  expect((await put(appWith(ownToken), TOKEN)).status).toBe(200);
+  const response = await get(appWith(ownToken, 503));
+  // An outage is reported as such; only GitHub's own 401 means the token is invalid.
+  expect(response.status).toBe(502);
 });

@@ -40,6 +40,18 @@ export interface GithubTokenDeps {
   fetchImpl?: typeof fetch;
 }
 
+/**
+ * GitHub answered 401: the token is revoked, expired or never valid. Every
+ * other failure (outage, rate limit, timeout) is a plain Error, so callers can
+ * tell "replace your token" from "try again later".
+ */
+export class GithubTokenRejectedError extends Error {
+  constructor() {
+    super("GitHub rejected the token");
+    this.name = "GithubTokenRejectedError";
+  }
+}
+
 export function githubTokenKind(token: string): GithubTokenKind {
   if (token.startsWith("ghp_")) return "classic";
   if (token.startsWith("github_pat_")) return "fine-grained";
@@ -55,7 +67,7 @@ export async function inspectGithubToken(
     headers: apiHeaders(token),
     signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
   });
-  if (response.status === 401) throw new Error("GitHub rejected the token");
+  if (response.status === 401) throw new GithubTokenRejectedError();
   if (!response.ok) throw new Error(`GET /user failed: ${response.status}`);
   const user = (await response.json()) as { id?: number | string; login?: string };
   if (user.id === undefined || !user.login) {
@@ -81,7 +93,7 @@ export async function listGithubTokenRepositories(
       `${API_BASE}/user/repos?per_page=100&sort=full_name&page=${page}`,
       { headers: apiHeaders(token), signal: AbortSignal.timeout(PROBE_TIMEOUT_MS) },
     );
-    if (response.status === 401) throw new Error("GitHub rejected the token");
+    if (response.status === 401) throw new GithubTokenRejectedError();
     if (!response.ok) throw new Error(`GET /user/repos failed: ${response.status}`);
     const batch = (await response.json()) as Array<{
       full_name?: string;
