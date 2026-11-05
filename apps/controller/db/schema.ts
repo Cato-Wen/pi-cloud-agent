@@ -22,10 +22,12 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import { defineCredentialTables } from "./schema-credentials";
 import { type AttachedPluginRef, definePluginTables } from "./schema-plugins";
 
 import { defineReviewRepositories } from "./schema-reviews";
 
+export type { PlatformRepoAccess } from "./schema-credentials";
 export type { AttachedPluginRef } from "./schema-plugins";
 
 export type SessionOperation = "archiving" | "expiring" | "parking" | "replacing";
@@ -59,25 +61,6 @@ export const appUsers = pgTable(
   (table) => [uniqueIndex("app_users_github_user_idx").on(table.githubUserId)],
 );
 
-export const vcsConnections = pgTable(
-  "vcs_connections",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    userId: uuid("user_id").references(() => appUsers.id, { onDelete: "cascade" }),
-    provider: text("provider").notNull(),
-    accountId: text("account_id").notNull(),
-    accountName: text("account_name").notNull(),
-    accessToken: text("access_token").notNull(),
-    refreshToken: text("refresh_token"),
-    expiresAt: timestamptz("expires_at"),
-    createdAt: timestamptz("created_at").notNull().defaultNow(),
-    updatedAt: timestamptz("updated_at").notNull().defaultNow(),
-  },
-  (table) => [
-    uniqueIndex("vcs_connections_user_provider_idx").on(table.userId, table.provider),
-  ],
-);
-
 export const repositorySandboxImages = pgTable(
   "repository_environments",
   {
@@ -100,20 +83,6 @@ export const repositorySandboxImages = pgTable(
     ),
     index("repository_environments_user_updated_idx").on(table.userId, table.updatedAt.desc()),
   ],
-);
-
-export const oauthStates = pgTable(
-  "oauth_states",
-  {
-    state: text("state").primaryKey(),
-    userId: uuid("user_id").references(() => appUsers.id, { onDelete: "cascade" }),
-    provider: text("provider").notNull(),
-    returnTo: text("return_to"),
-    codeVerifier: text("code_verifier").notNull(),
-    expiresAt: timestamptz("expires_at").notNull(),
-    createdAt: timestamptz("created_at").notNull().defaultNow(),
-  },
-  (table) => [index("oauth_states_expiry_idx").on(table.expiresAt)],
 );
 
 export const llmConnections = pgTable(
@@ -479,6 +448,11 @@ export const {
 
 export type { InstallMode, ReviewStatus, UserPluginOverride } from "./schema-plugins";
 
+export const { vcsConnections, oauthStates, platformVcsCredentials } = defineCredentialTables(
+  () => appUsers.id,
+);
+
+export type PlatformVcsCredentialRow = typeof platformVcsCredentials.$inferSelect;
 export type RunRow = typeof runs.$inferSelect;
 export type SessionRow = typeof sessions.$inferSelect;
 export type RunEventRow = typeof runEvents.$inferSelect;

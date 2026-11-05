@@ -4,6 +4,7 @@ import { cors } from "hono/cors";
 import { getAppUserForSession } from "../db/auth";
 import { githubSetupRoutes, githubWebhookRoutes } from "../integrations/github";
 import { OAuthFlowManager } from "../llm/oauth";
+import { adminRoutes } from "./admin";
 import { authRoutes } from "./auth";
 import type { AppEnv, Deps } from "./deps";
 import { environmentRoutes } from "./environments";
@@ -102,6 +103,7 @@ export function createApp(deps: Deps): Hono<AppEnv> {
   app.route("/environments", environmentRoutes(deps));
   app.route("/llm", llmRoutes(new OAuthFlowManager(deps.database, deps.config)));
   app.route("/vcs", vcsRoutes());
+  app.route("/admin", adminRoutes());
   app.route("/", metaRoutes());
 
   return app;

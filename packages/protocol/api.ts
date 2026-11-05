@@ -166,6 +166,23 @@ export interface PersonalTokenStatus {
   writableRepos: string[];
 }
 
+/** An operator-managed token the platform uses for agents; never carries the token itself. */
+export interface PlatformCredentialSummary {
+  id: string;
+  provider: string;
+  label: string;
+  accountLogin: string;
+  last4: string;
+  expiresAt: string | null;
+  probedAt: string | null;
+  /** What git allowed per private repository when last probed. */
+  repoAccess: Array<{ repo: string; access: "read" | "write" }>;
+}
+
+export interface PlatformCredentialsResponse {
+  credentials: PlatformCredentialSummary[];
+}
+
 export interface PluginCatalogEntry {
   name: string;
   publisher: string;
