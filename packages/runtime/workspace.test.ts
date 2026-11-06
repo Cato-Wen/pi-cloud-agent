@@ -1,15 +1,22 @@
 import { spawn } from "node:child_process";
 import { EventEmitter } from "node:events";
 import { existsSync } from "node:fs";
-import { rm } from "node:fs/promises";
+import { rm, writeFile } from "node:fs/promises";
+import type { SandboxWorkspaceRepo } from "@pi-cloud-agent/protocol";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { trimCommandOutput } from "./command";
 import type { RuntimeConfig } from "./config";
 import type { Reporter } from "./reporter";
-import { gitDiff, gitRevision, prepareCheckout, trimCommandOutput } from "./workspace";
+import { configureGitCredentials, gitDiff, gitRevision, prepareCheckout } from "./workspace";
 
 vi.mock("node:child_process", () => ({ spawn: vi.fn() }));
 vi.mock("node:fs", () => ({ existsSync: vi.fn() }));
-vi.mock("node:fs/promises", () => ({ rm: vi.fn(async () => undefined) }));
+vi.mock("node:fs/promises", () => ({
+  rm: vi.fn(async () => undefined),
+  mkdir: vi.fn(async () => undefined),
+  writeFile: vi.fn(async () => undefined),
+  chmod: vi.fn(async () => undefined),
+}));
 
 const config: RuntimeConfig = {
   runId: "run-1",
@@ -42,7 +49,8 @@ const config: RuntimeConfig = {
     baseSha: "",
     path: "/workspace/widgets",
   },
-  git: { username: "x-access-token", hasToken: false },
+  workspace: [],
+  git: { username: "x-access-token", hasToken: false, tokenVars: [] },
   mcpConfig: null,
   githubReview: null,
   githubComment: null,
@@ -132,6 +140,121 @@ describe("checkout preparation", () => {
       "main",
       config.repo.cloneUrl,
       config.repo.path,
+    ]);
+  });
+});
+
+const primaryRepo: SandboxWorkspaceRepo = {
+  fullName: "acme/widgets",
+  host: "github.com",
+  cloneUrl: config.repo.cloneUrl,
+  defaultBranch: "main",
+  path: config.repo.path,
+  access: "write",
+  role: "primary",
+  tokenVar: "SCM_TOKEN",
+};
+const kbRepo: SandboxWorkspaceRepo = {
+  fullName: "ct-kb/team-cookbook-kb",
+  host: "github.com",
+  cloneUrl: "https://github.com/ct-kb/team-cookbook-kb.git",
+  defaultBranch: "main",
+  path: "/workspace/team-cookbook-kb",
+  access: "read",
+  role: "context",
+  tokenVar: "SCM_TOKEN_1",
+};
+const multi: RuntimeConfig = {
+  ...config,
+  workspace: [primaryRepo, kbRepo],
+  git: { username: "x-access-token", hasToken: true, tokenVars: ["SCM_TOKEN", "SCM_TOKEN_1"] },
+};
+
+describe("context repositories", () => {
+  it("clones context repositories after the primary and disables push on read-only ones", async () => {
+    const children: MockChild[] = [];
+    const reporter = testReporter();
+    vi.mocked(existsSync).mockReturnValue(false);
+    queueChild(children, "", 0);
+    queueChild(children, "", 0);
+    queueChild(children, "", 0);
+
+    await prepareCheckout(multi, reporter);
+
+    const calls = vi.mocked(spawn).mock.calls;
+    expect(calls[0]?.[1]).toEqual([
+      "clone",
+      "--depth",
+      "100",
+      "--branch",
+      "main",
+      config.repo.cloneUrl,
+      config.repo.path,
+    ]);
+    expect(calls[1]?.[1]).toEqual([
+      "clone",
+      "--depth",
+      "100",
+      "--branch",
+      "main",
+      kbRepo.cloneUrl,
+      kbRepo.path,
+    ]);
+    expect(calls[2]?.[1]).toEqual(["remote", "set-url", "--push", "origin", "DISABLED"]);
+    expect(calls[2]?.[2]).toMatchObject({ cwd: kbRepo.path });
+    expect(reporter.log).toHaveBeenCalledWith("git.context_cloned", {
+      fullName: kbRepo.fullName,
+      path: kbRepo.path,
+    });
+  });
+
+  it("clones only the context repositories a resumed workspace is missing", async () => {
+    const children: MockChild[] = [];
+    const reporter = testReporter();
+    vi.mocked(existsSync).mockImplementation((path) =>
+      String(path).replaceAll("\\", "/").startsWith(config.repo.path),
+    );
+    queueChild(children, "https://github.com/acme/widgets.git\n", 0);
+    queueChild(children, "", 0);
+    queueChild(children, "", 0);
+
+    const result = await prepareCheckout({ ...multi, workspaceResumed: true }, reporter);
+
+    expect(result).toBe("resumed");
+    const args = vi.mocked(spawn).mock.calls.map((call) => call[1]);
+    expect(args[0]).toEqual(["remote", "get-url", "origin"]);
+    expect(args[1]).toContain(kbRepo.cloneUrl);
+    expect(args.some((call) => call?.includes(config.repo.cloneUrl))).toBe(false);
+    expect(rm).not.toHaveBeenCalled();
+  });
+
+  it("writes a credential helper script instead of the inline helper when the workspace has several repositories", async () => {
+    const children: MockChild[] = [];
+    const reporter = testReporter();
+    queueChild(children, "", 0);
+    queueChild(children, "", 0);
+
+    await configureGitCredentials(multi, reporter);
+
+    expect(writeFile).toHaveBeenCalledWith(
+      "/workspace/.pi-cloud-agent/git-credential.sh",
+      expect.stringContaining('token="$SCM_TOKEN_1"'),
+      { mode: 0o700 },
+    );
+    const args = vi.mocked(spawn).mock.calls.map((call) => call[1]);
+    expect(args[0]).toEqual([
+      "config",
+      "--global",
+      "--replace-all",
+      "credential.helper",
+      "/workspace/.pi-cloud-agent/git-credential.sh",
+    ]);
+    expect(args[1]).toEqual([
+      "config",
+      "--global",
+      "--replace-all",
+      "credential.useHttpPath",
+      "true",
     ]);
   });
 });

@@ -8,6 +8,8 @@ import {
   redactUrlCredentials,
   SANDBOX_ENV,
   SANDBOX_PATHS,
+  type SandboxWorkspaceRepo,
+  sandboxWorkspaceRepoSchema,
   THINKING_LEVELS,
   type ThinkingLevel,
 } from "@pi-cloud-agent/protocol";
@@ -54,7 +56,14 @@ export interface RuntimeConfig {
     path: string;
   };
 
-  git: { username: string; hasToken: boolean };
+  /** Every repository in the sandbox, primary first; empty when there is only the primary. */
+  workspace: SandboxWorkspaceRepo[];
+  git: {
+    username: string;
+    hasToken: boolean;
+    /** The `SCM_TOKEN*` variables actually present, so a missing one is reported, not guessed. */
+    tokenVars: string[];
+  };
 
   /** Parsed MCP config JSON when plugins attached MCP; null means zero MCP. */
   mcpConfig: unknown | null;
@@ -127,9 +136,11 @@ export function readConfig(): RuntimeConfig {
       path: join(SANDBOX_PATHS.workspace, repoName),
     },
 
+    workspace: parseWorkspace(optional(SANDBOX_ENV.workspaceRepos)),
     git: {
       username: optional(SANDBOX_ENV.scmTokenUsername, "x-access-token"),
       hasToken: Boolean(optional(SANDBOX_ENV.scmToken)),
+      tokenVars: tokenVariables(),
     },
 
     mcpConfig: parseMcpConfig(optional(SANDBOX_ENV.mcpConfig)),
@@ -149,6 +160,26 @@ function parseGithubComment(raw: string): GithubCommentContext | null {
   const context = githubCommentContextSchema.safeParse(parsed);
   if (!context.success) throw new Error(`${SANDBOX_ENV.githubComment} is invalid`);
   return context.data;
+}
+
+function parseWorkspace(raw: string): SandboxWorkspaceRepo[] {
+  if (!raw) return [];
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw) as unknown;
+  } catch {
+    throw new Error(`${SANDBOX_ENV.workspaceRepos} is not valid JSON`);
+  }
+  const workspace = sandboxWorkspaceRepoSchema.array().safeParse(parsed);
+  if (!workspace.success) throw new Error(`${SANDBOX_ENV.workspaceRepos} is invalid`);
+  return workspace.data;
+}
+
+/** `SCM_TOKEN` and its numbered siblings, in whatever order the environment lists them. */
+function tokenVariables(): string[] {
+  return Object.entries(process.env)
+    .filter(([name, value]) => /^SCM_TOKEN(_\d+)?$/.test(name) && Boolean(value?.trim()))
+    .map(([name]) => name);
 }
 
 function parseMcpConfig(raw: string): unknown | null {
@@ -197,7 +228,7 @@ function readAuthType(): "api_key" | "oauth" {
  * update this file. See docs/secrets.md.
  */
 function secretValues(): string[] {
-  const pattern = /(TOKEN|API_KEY|SECRET|PASSWORD|AUTH_JSON)$/;
+  const pattern = /(TOKEN|API_KEY|SECRET|PASSWORD|AUTH_JSON)(_\d+)?$/;
   const values: string[] = [];
   for (const [name, value] of Object.entries(process.env)) {
     if (!value) continue;

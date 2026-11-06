@@ -1,126 +1,16 @@
-import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
-import { rm } from "node:fs/promises";
+import { chmod, mkdir, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { StringDecoder } from "node:string_decoder";
-import { redactUrlCredentials, SANDBOX_ENV, SANDBOX_PATHS } from "@pi-cloud-agent/protocol";
+import { SANDBOX_ENV, SANDBOX_PATHS } from "@pi-cloud-agent/protocol";
+import { CLONE_DEPTH, runCommand as run } from "./command";
 import type { RuntimeConfig } from "./config";
+import { prepareContextRepositories } from "./context-repos";
+import { credentialHelperScript } from "./git-credential-helper";
 import type { Reporter } from "./reporter";
 
 /** Prepare the checkout the agent will work in. */
 
-const CLONE_DEPTH = 100;
-const MAX_OUTPUT_CHARS = 1_000_000;
-
-interface CommandResult {
-  code: number;
-  output: string;
-  stderr: string;
-  outputTruncated: boolean;
-  signal: NodeJS.Signals | null;
-  timedOut: boolean;
-}
-
-type OutputPosition = "head" | "tail";
-
-export function trimCommandOutput(
-  output: string,
-  maxOutputChars: number,
-  position: OutputPosition = "tail",
-): { output: string; truncated: boolean } {
-  if (output.length <= maxOutputChars) return { output, truncated: false };
-  return {
-    output:
-      position === "head" ? output.slice(0, maxOutputChars) : output.slice(-maxOutputChars),
-    truncated: true,
-  };
-}
-
-function run(
-  command: string,
-  args: string[],
-  options: {
-    cwd?: string;
-    env?: NodeJS.ProcessEnv;
-    timeoutMs?: number;
-    maxOutputChars?: number;
-    outputPosition?: OutputPosition;
-    includeStderr?: boolean;
-  } = {},
-): Promise<CommandResult> {
-  return new Promise((resolve) => {
-    const child = spawn(command, args, { cwd: options.cwd, env: options.env ?? process.env });
-    const stdoutDecoder = new StringDecoder("utf8");
-    const stderrDecoder = new StringDecoder("utf8");
-    let stdout = "";
-    let stderr = "";
-    let stdoutTruncated = false;
-    let stderrTruncated = false;
-    let timedOut = false;
-    let settled = false;
-    const append = (stream: "stdout" | "stderr", text: string) => {
-      if (!text) return;
-      const maxOutputChars = options.maxOutputChars ?? MAX_OUTPUT_CHARS;
-      const trimmed = trimCommandOutput(
-        (stream === "stdout" ? stdout : stderr) + text,
-        maxOutputChars,
-        options.outputPosition,
-      );
-      if (stream === "stdout") {
-        stdout = trimmed.output;
-        stdoutTruncated ||= trimmed.truncated;
-      } else {
-        stderr = trimmed.output;
-        stderrTruncated ||= trimmed.truncated;
-      }
-    };
-    child.stdout.on("data", (chunk: Buffer) => append("stdout", stdoutDecoder.write(chunk)));
-    child.stderr.on("data", (chunk: Buffer) => append("stderr", stderrDecoder.write(chunk)));
-
-    const flush = () => {
-      append("stdout", stdoutDecoder.end());
-      append("stderr", stderrDecoder.end());
-    };
-
-    const timer = options.timeoutMs
-      ? setTimeout(() => {
-          timedOut = true;
-          child.kill("SIGKILL");
-        }, options.timeoutMs)
-      : null;
-
-    const finish = (code: number, signal: NodeJS.Signals | null) => {
-      if (settled) return;
-      settled = true;
-      if (timer) clearTimeout(timer);
-      flush();
-      const cleanStdout = redactUrlCredentials(stdout);
-      const cleanStderr = redactUrlCredentials(stderr).trim();
-      resolve({
-        code,
-        output:
-          options.includeStderr === false
-            ? cleanStdout
-            : [cleanStdout.trim(), cleanStderr].filter(Boolean).join("\n"),
-        stderr: cleanStderr,
-        outputTruncated:
-          stdoutTruncated || (options.includeStderr !== false && stderrTruncated),
-        signal,
-        timedOut,
-      });
-    };
-
-    child.on("error", (error) => {
-      append("stderr", `\n${error.message}`);
-      finish(1, null);
-    });
-    child.on("close", (code, signal) => {
-      // A process closed by a signal has no exit code. It did not succeed.
-      finish(code ?? (timedOut ? 124 : 1), signal);
-    });
-  });
-}
-
+const CREDENTIAL_HELPER_PATH = `${SANDBOX_PATHS.state}/git-credential.sh`;
 const DIFF_MAX_OUTPUT_CHARS = 2_000_000;
 const UNTRACKED_FILE_LIST_MAX_CHARS = 200_000;
 const MAX_UNTRACKED_FILES = 256;
@@ -309,20 +199,57 @@ export async function configureGitCredentials(
     return;
   }
 
-  const helper =
-    `!f() { printf 'username=%s\\npassword=%s\\n' ` +
-    `"$\{${SANDBOX_ENV.scmTokenUsername}:-${config.git.username}}" "$${SANDBOX_ENV.scmToken}"; }; f`;
-
-  for (const [key, value] of [
-    ["credential.helper", helper],
-    // Without this, git scopes credentials per path and re-asks on redirect.
-    ["credential.useHttpPath", "false"],
-  ] as const) {
+  const settings =
+    config.workspace.length > 1
+      ? await installCredentialHelperScript(config, reporter)
+      : inlineCredentialHelper(config);
+  for (const [key, value] of settings) {
     const result = await run("git", ["config", "--global", "--replace-all", key, value]);
     if (result.code !== 0) {
       reporter.log("git.config_failed", { key, output: result.output });
     }
   }
+}
+
+type GitSetting = readonly [key: string, value: string];
+
+/** One repository, one token: the helper reads it straight from the environment. */
+function inlineCredentialHelper(config: RuntimeConfig): GitSetting[] {
+  const helper =
+    `!f() { printf 'username=%s\\npassword=%s\\n' ` +
+    `"$\{${SANDBOX_ENV.scmTokenUsername}:-${config.git.username}}" "$${SANDBOX_ENV.scmToken}"; }; f`;
+  return [
+    ["credential.helper", helper],
+    // Without this, git scopes credentials per path and re-asks on redirect.
+    ["credential.useHttpPath", "false"],
+  ];
+}
+
+/**
+ * Several repositories, each with its own token: a script picks the variable
+ * by host and path. It names variables only, so reading it reveals no token.
+ */
+async function installCredentialHelperScript(
+  config: RuntimeConfig,
+  reporter: Reporter,
+): Promise<GitSetting[]> {
+  for (const repo of config.workspace) {
+    if (!config.git.tokenVars.includes(repo.tokenVar)) {
+      reporter.log("git.token_missing", { fullName: repo.fullName, tokenVar: repo.tokenVar });
+    }
+  }
+  await mkdir(SANDBOX_PATHS.state, { recursive: true });
+  await writeFile(
+    CREDENTIAL_HELPER_PATH,
+    credentialHelperScript(config.workspace, config.git.username),
+    { mode: 0o700 },
+  );
+  // writeFile keeps the mode of a file that already exists (a resumed workspace).
+  await chmod(CREDENTIAL_HELPER_PATH, 0o700);
+  return [
+    ["credential.helper", CREDENTIAL_HELPER_PATH],
+    ["credential.useHttpPath", "true"],
+  ];
 }
 
 /**
@@ -343,8 +270,13 @@ export async function prepareCheckout(
     throw new Error("repository checkout path must stay under /workspace");
   }
   if (config.workspaceResumed) {
-    if (await reuseCheckout(repo.path, reporter)) return "resumed";
-    throw new Error("the provider resumed a workspace without the repository checkout");
+    if (!(await reuseCheckout(repo.path, reporter))) {
+      throw new Error("the provider resumed a workspace without the repository checkout");
+    }
+    // A session may gain context repositories after its workspace was first
+    // created; only the missing ones are cloned.
+    await prepareContextRepositories(config, reporter, { resumed: true });
+    return "resumed";
   }
   // A repository image is allowed to contain toolchain caches or a stale
   // checkout path. Cold starts must not trust that state: remove only the
@@ -354,6 +286,7 @@ export async function prepareCheckout(
   await checkoutHeadRevision(repo);
   await fetchDiffRevisions(config);
   reporter.log("git.checkout_ready", { path: repo.path, headSha: repo.headSha || null });
+  await prepareContextRepositories(config, reporter, { resumed: false });
   return "created";
 }
 
