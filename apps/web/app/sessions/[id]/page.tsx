@@ -32,7 +32,7 @@ const SessionDiffSidebar = dynamic(
     loading: () => (
       <aside className="flex h-full min-h-0 w-full flex-col border-l border-border bg-background">
         <div className="flex h-12 shrink-0 items-center border-b border-border px-4 text-[13px] font-semibold">
-          Changes
+          改动
         </div>
       </aside>
     ),
@@ -259,10 +259,10 @@ export default function SessionPage() {
       </div>
       <ConfirmDialog
         open={deleteDialogOpen}
-        title={session ? `Delete “${session.title || "session"}”` : "Delete session"}
-        description="This permanently deletes the session, its chat history, and its sandbox checkpoint."
-        confirmLabel="Delete"
-        busyLabel="Deleting…"
+        title={session ? `删除“${session.title || "会话"}”` : "删除会话"}
+        description="会话、聊天记录和沙箱检查点会被永久删除。"
+        confirmLabel="删除"
+        busyLabel="删除中…"
         busy={deleting}
         error={deleteError}
         onCancel={() => {
@@ -296,13 +296,13 @@ function SessionHeader({
     <header className="app-header flex h-12 shrink-0 items-center gap-2.5 px-3 sm:px-4">
       <Link
         href={workspaceHome(homeMode)}
-        aria-label={homeMode === "reviews" ? "Back to reviews" : "Back to tasks"}
+        aria-label={homeMode === "reviews" ? "返回评审" : "返回任务"}
         className="grid size-7 place-items-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
       >
         <ArrowLeftIcon className="size-4" />
       </Link>
       <div className="min-w-0 flex-1">
-        <h1 className="truncate text-[13px] font-medium">{session?.title ?? "Session"}</h1>
+        <h1 className="truncate text-[13px] font-medium">{session?.title ?? "会话"}</h1>
         {session?.repo ? (
           <p className="mt-px truncate text-[11px] text-muted-foreground">{session.repo}</p>
         ) : null}
@@ -310,7 +310,7 @@ function SessionHeader({
       <button
         type="button"
         onClick={onToggleDiff}
-        aria-label={diffOpen ? "Hide changes" : "Show changes"}
+        aria-label={diffOpen ? "隐藏改动" : "显示改动"}
         aria-pressed={diffOpen}
         className={cn(
           "hidden size-7 place-items-center rounded-md transition-colors duration-200 motion-reduce:transition-none hover:bg-accent hover:text-foreground lg:grid",
@@ -325,8 +325,8 @@ function SessionHeader({
         disabled={
           deleting || !session || (session.status !== "idle" && session.status !== "parking")
         }
-        aria-label="Delete session"
-        title="Delete session"
+        aria-label="删除会话"
+        title="删除会话"
         className="grid size-7 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
       >
         <Trash2Icon className="size-3.5" />
@@ -364,7 +364,7 @@ function SessionMeta({
 
         {branch ? (
           <p className="flex min-w-0 items-center gap-1.5 text-foreground">
-            <span className="text-muted-foreground">On</span>
+            <span className="text-muted-foreground">分支</span>
             <GitBranchIcon className="size-3 shrink-0 text-muted-foreground" />
             <span className="truncate font-mono">{branch}</span>
           </p>
@@ -382,14 +382,14 @@ function SessionMeta({
           <div className="space-y-1 text-muted-foreground">
             <p>
               {session.retentionStatus === "inactive"
-                ? "Inactive; next turn will restore a cold checkout"
+                ? "已休眠，下一轮会重新冷检出仓库"
                 : session.workspaceAvailable
-                  ? "Active checkpoint available"
-                  : "Checkpoint will be saved when this turn finishes"}
+                  ? "检查点可用"
+                  : "本轮结束后保存检查点"}
             </p>
             <p className="text-[11px] text-muted-foreground/80">
-              Checkpoints are released after {formatDuration(session.inactiveAfterSeconds)}{" "}
-              without activity; chat history is kept for cold resume.
+              检查点在 {formatDuration(session.inactiveAfterSeconds)}
+              无活动后释放，聊天记录会保留，用于冷恢复。
             </p>
           </div>
         ) : null}
@@ -445,10 +445,10 @@ function ChangesLine({
       className="cursor-pointer text-left font-mono tabular-nums text-foreground transition-colors hover:text-foreground/75"
     >
       {added === 0 && removed === 0 ? (
-        <span className="text-muted-foreground">No edits yet</span>
+        <span className="text-muted-foreground">暂无改动</span>
       ) : (
         <>
-          <span className="text-muted-foreground">± Changes </span>
+          <span className="text-muted-foreground">± 改动 </span>
           {added > 0 ? (
             <span className="text-emerald-600 dark:text-emerald-400">+{added}</span>
           ) : null}

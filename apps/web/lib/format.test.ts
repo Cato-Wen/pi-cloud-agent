@@ -17,12 +17,12 @@ describe("isActiveStatus", () => {
 
 describe("formatDuration", () => {
   it("uses readable singular and plural retention units", () => {
-    expect(formatDuration(1)).toBe("1 second");
-    expect(formatDuration(60)).toBe("1 minute");
-    expect(formatDuration(604_800)).toBe("7 days");
+    expect(formatDuration(1)).toBe("1 秒");
+    expect(formatDuration(60)).toBe("1 分钟");
+    expect(formatDuration(604_800)).toBe("7 天");
   });
 
   it("rounds values that do not align to a whole unit", () => {
-    expect(formatDuration(90)).toBe("2 minutes");
+    expect(formatDuration(90)).toBe("2 分钟");
   });
 });

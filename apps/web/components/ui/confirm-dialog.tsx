@@ -41,7 +41,7 @@ export function ConfirmDialog({
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <button
         type="button"
-        aria-label="Close dialog"
+        aria-label="关闭对话框"
         className="absolute inset-0 bg-background/50 backdrop-blur-sm"
         onClick={busy ? undefined : onCancel}
       />
@@ -67,7 +67,7 @@ export function ConfirmDialog({
             disabled={busy}
             autoFocus
           >
-            Cancel
+            取消
           </Button>
           <Button
             type="button"

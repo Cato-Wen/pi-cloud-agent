@@ -44,7 +44,7 @@ export function SessionQueue({
         <ChevronDownIcon
           className={`size-3.5 transition-transform ${open ? "" : "-rotate-90"}`}
         />
-        <span>{runs.length} queued</span>
+        <span>{runs.length} 条排队中</span>
       </button>
       {open ? (
         <div className="border-t border-border">
@@ -60,8 +60,8 @@ export function SessionQueue({
                 </span>
                 <button
                   type="button"
-                  aria-label="Remove queued message"
-                  title="Remove from queue"
+                  aria-label="删除排队消息"
+                  title="从队列中删除"
                   disabled={busyId !== null}
                   onClick={() => void act(run.id, false)}
                   className="grid size-7 place-items-center rounded-md text-muted-foreground opacity-70 hover:bg-background hover:text-foreground disabled:opacity-30 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
@@ -71,8 +71,8 @@ export function SessionQueue({
                 {index === 0 && activeRunId ? (
                   <button
                     type="button"
-                    aria-label="Interrupt current turn and send this message"
-                    title="Interrupt and send next"
+                    aria-label="中断当前轮次并发送这条消息"
+                    title="中断并立即发送"
                     disabled={busyId !== null}
                     onClick={() => void act(run.id, true)}
                     className="grid size-7 place-items-center rounded-md text-muted-foreground opacity-70 hover:bg-background hover:text-foreground disabled:opacity-30 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"

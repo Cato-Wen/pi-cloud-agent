@@ -40,7 +40,7 @@ export function ConversationScrollButton({
   if (isAtBottom) return null;
   return (
     <Button
-      aria-label="Scroll to latest"
+      aria-label="滚动到最新"
       className={cn("absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full", className)}
       onClick={handleClick}
       size="icon"

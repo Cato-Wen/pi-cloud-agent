@@ -57,17 +57,17 @@ export function PlatformCredentialCard({
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="text-sm font-medium">{credential.label}</h3>
             {expiry.expired ? (
-              <StatusTag tone="err">Expired</StatusTag>
+              <StatusTag tone="err">已过期</StatusTag>
             ) : expiry.soon ? (
-              <StatusTag tone="warn">Expires {expiry.label}</StatusTag>
+              <StatusTag tone="warn">{expiry.label} 到期</StatusTag>
             ) : (
-              <StatusTag tone="ok">Valid</StatusTag>
+              <StatusTag tone="ok">有效</StatusTag>
             )}
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
             {credential.accountLogin} · <code className="font-mono">…{credential.last4}</code> ·{" "}
-            {credential.expiresAt ? `expires ${expiry.label}` : "no expiry"}
-            {credential.probedAt ? ` · probed ${relative(credential.probedAt)}` : ""}
+            {credential.expiresAt ? `${expiry.label} 到期` : "不过期"}
+            {credential.probedAt ? ` · ${relative(credential.probedAt)}探测` : ""}
           </p>
         </div>
         <div className="flex shrink-0 gap-2">
@@ -79,7 +79,7 @@ export function PlatformCredentialCard({
             onClick={() => void run("probe", () => api.probePlatformCredential(credential.id))}
           >
             <RefreshCwIcon className="size-3.5" />
-            {busy === "probe" ? "Probing…" : "Re-probe"}
+            {busy === "probe" ? "探测中…" : "重新探测"}
           </Button>
           <Button
             type="button"
@@ -88,7 +88,7 @@ export function PlatformCredentialCard({
             disabled={busy !== null}
             onClick={() => setReplacing((value) => !value)}
           >
-            Replace
+            更换
           </Button>
           <Button
             type="button"
@@ -97,7 +97,7 @@ export function PlatformCredentialCard({
             disabled={busy !== null}
             onClick={() => setConfirmingRemove(true)}
           >
-            Remove
+            删除
           </Button>
         </div>
       </div>
@@ -111,7 +111,7 @@ export function PlatformCredentialCard({
               await api.updatePlatformCredential(credential.id, { token: token.trim() });
               setToken("");
               setReplacing(false);
-              onNotice("Token replaced and probed.", "success");
+              onNotice("token 已更换并探测。", "success");
             });
           }}
         >
@@ -121,12 +121,12 @@ export function PlatformCredentialCard({
             spellCheck={false}
             value={token}
             onChange={(event) => setToken(event.target.value)}
-            placeholder="New token for this credential"
-            aria-label="Replacement token"
+            placeholder="此凭证的新 token"
+            aria-label="替换用的 token"
             className="h-9 min-w-0 flex-1 rounded-lg border border-input bg-background px-3 font-mono text-xs outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
           />
           <Button type="submit" size="sm" disabled={busy !== null || token.trim().length < 20}>
-            {busy === "replace" ? "Probing…" : "Save & probe"}
+            {busy === "replace" ? "探测中…" : "保存并探测"}
           </Button>
         </form>
       ) : null}
@@ -140,15 +140,15 @@ export function PlatformCredentialCard({
       <table className="mt-4 w-full text-xs">
         <thead>
           <tr className="border-b border-border text-left text-muted-foreground">
-            <th className="py-1.5 pr-3 font-medium">Repository</th>
-            <th className="w-24 py-1.5 font-medium">Access</th>
+            <th className="py-1.5 pr-3 font-medium">仓库</th>
+            <th className="w-24 py-1.5 font-medium">权限</th>
           </tr>
         </thead>
         <tbody>
           {credential.repoAccess.length === 0 ? (
             <tr>
               <td colSpan={2} className="py-3 text-muted-foreground">
-                This token reaches no private repository.
+                此 token 无法访问任何私有仓库。
               </td>
             </tr>
           ) : (
@@ -157,9 +157,9 @@ export function PlatformCredentialCard({
                 <td className="py-1.5 pr-3 font-mono">{entry.repo}</td>
                 <td className="py-1.5">
                   {entry.access === "write" ? (
-                    <StatusTag tone="ok">write</StatusTag>
+                    <StatusTag tone="ok">可写</StatusTag>
                   ) : (
-                    <StatusTag tone="muted">read-only</StatusTag>
+                    <StatusTag tone="muted">只读</StatusTag>
                   )}
                 </td>
               </tr>
@@ -170,17 +170,17 @@ export function PlatformCredentialCard({
 
       <ConfirmDialog
         open={confirmingRemove}
-        title={`Remove “${credential.label}”?`}
-        description="Agents that rely on this token for read access will fail until another credential reaches their repositories."
-        confirmLabel="Remove"
-        busyLabel="Removing…"
+        title={`删除「${credential.label}」？`}
+        description="依赖此 token 进行只读访问的 agent 将会失败，直到有其他凭证能访问它们的仓库。"
+        confirmLabel="删除"
+        busyLabel="删除中…"
         busy={busy === "remove"}
         onCancel={() => setConfirmingRemove(false)}
         onConfirm={() =>
           void run("remove", async () => {
             await api.deletePlatformCredential(credential.id);
             setConfirmingRemove(false);
-            onNotice("Credential removed.", "success");
+            onNotice("凭证已删除。", "success");
           })
         }
       />
@@ -190,9 +190,9 @@ export function PlatformCredentialCard({
 
 function relative(iso: string): string {
   const minutes = Math.round((Date.now() - new Date(iso).getTime()) / 60_000);
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${minutes} min ago`;
+  if (minutes < 1) return "刚刚";
+  if (minutes < 60) return `${minutes} 分钟前`;
   const hours = Math.round(minutes / 60);
-  if (hours < 48) return `${hours} h ago`;
-  return `${Math.round(hours / 24)} d ago`;
+  if (hours < 48) return `${hours} 小时前`;
+  return `${Math.round(hours / 24)} 天前`;
 }

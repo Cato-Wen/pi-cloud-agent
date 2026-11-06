@@ -24,11 +24,7 @@ export function ReviewSubmissionCard({
 }) {
   const failed = status === "error";
   const pending = status !== "completed" && !failed;
-  const statusLabel = failed
-    ? "Publication failed"
-    : pending
-      ? "Submitting review"
-      : "Published";
+  const statusLabel = failed ? "发布失败" : pending ? "正在提交评审" : "已发布";
 
   return (
     <article className="overflow-hidden rounded-xl border border-border/80 bg-card shadow-sm">
@@ -39,11 +35,11 @@ export function ReviewSubmissionCard({
           </span>
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-              <h2 className="text-sm font-semibold text-foreground">GitHub review</h2>
+              <h2 className="text-sm font-semibold text-foreground">GitHub 评审</h2>
               <span className="text-xs text-muted-foreground">
                 {submission.comments.length === 0
-                  ? "Overall feedback"
-                  : `${submission.comments.length} inline ${submission.comments.length === 1 ? "finding" : "findings"}`}
+                  ? "整体反馈"
+                  : `${submission.comments.length} 条行内意见`}
               </span>
             </div>
             <p className="mt-1 text-[11px] text-muted-foreground">{statusLabel}</p>
@@ -55,7 +51,7 @@ export function ReviewSubmissionCard({
       <div className="px-4 py-4">
         <div className="mb-2 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
           <MessageSquareQuoteIcon className="size-3.5" />
-          Summary & feedback
+          总结与反馈
         </div>
         <div className="text-[13px] leading-6 text-foreground/90 [&_blockquote]:my-3 [&_blockquote]:border-l-2 [&_blockquote]:border-border [&_blockquote]:pl-3 [&_code]:rounded [&_code]:bg-muted [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono [&_li]:my-1 [&_pre]:my-3 [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-muted [&_pre]:p-3 [&_p]:my-2 [&_ul]:my-2">
           <MessageResponse>{submission.body}</MessageResponse>
@@ -67,7 +63,7 @@ export function ReviewSubmissionCard({
           <div className="flex items-center justify-between px-4 py-2.5">
             <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
               <FileCode2Icon className="size-3.5" />
-              Inline feedback
+              行内反馈
             </div>
             <span className="rounded-full bg-accent px-2 py-0.5 font-mono text-[10px] tabular-nums text-muted-foreground">
               {submission.comments.length}
@@ -87,7 +83,7 @@ export function ReviewSubmissionCard({
       ) : (
         <div className="flex items-center gap-2 border-t border-border/70 bg-muted/10 px-4 py-3 text-xs text-muted-foreground">
           <CheckCircle2Icon className="size-3.5 text-emerald-600 dark:text-emerald-400" />
-          No inline findings in this review.
+          本次评审没有行内意见。
         </div>
       )}
     </article>
@@ -116,9 +112,9 @@ function InlineCommentCard({
 }) {
   const lineLabel =
     comment.startLine && comment.startLine !== comment.line
-      ? `Lines ${comment.startLine}–${comment.line}`
-      : `Line ${comment.line}`;
-  const sideLabel = comment.side === "LEFT" ? "old" : "new";
+      ? `第 ${comment.startLine}–${comment.line} 行`
+      : `第 ${comment.line} 行`;
+  const sideLabel = comment.side === "LEFT" ? "改动前" : "改动后";
 
   return (
     <div className="overflow-hidden rounded-lg border border-border/80 bg-background">
@@ -131,7 +127,7 @@ function InlineCommentCard({
             type="button"
             onClick={() => onOpenChanges(comment.path)}
             className="min-w-0 truncate font-mono text-left text-foreground/85 underline decoration-border underline-offset-2 transition-colors hover:text-foreground hover:decoration-foreground/50"
-            title={`Open changes for ${comment.path}`}
+            title={`查看 ${comment.path} 的改动`}
           >
             {comment.path}
           </button>
@@ -145,7 +141,7 @@ function InlineCommentCard({
       <div className="border-l-2 border-orange-400/80 px-3 py-3">
         <div className="mb-2 flex items-center gap-2 text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
           <span className="text-orange-500">#{index + 1}</span>
-          Code comment
+          代码评论
         </div>
         <div
           className={cn(

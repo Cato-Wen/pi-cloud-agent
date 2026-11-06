@@ -109,8 +109,8 @@ export function SessionFollowUp({
         value={prompt}
         onChange={setPrompt}
         onSubmit={submit}
-        placeholder={active ? "Queue a message for Pi…" : `Follow up on ${repo}…`}
-        submitLabel="Send"
+        placeholder={active ? "给 Pi 排队一条消息…" : `在 ${repo} 上继续…`}
+        submitLabel="发送"
         submitEnabled={canSubmit}
         submitting={submitting}
         disabled={modelsLoading || modelConnections.length === 0}
@@ -130,8 +130,8 @@ export function SessionFollowUp({
                 );
               }}
               disabled={active || modelsLoading}
-              ariaLabel="Model for next turn"
-              placeholder={modelsLoading ? "Loading models…" : "Choose model"}
+              ariaLabel="下一轮使用的模型"
+              placeholder={modelsLoading ? "加载模型中…" : "选择模型"}
               className="h-7 min-w-0 max-w-44 border-0 bg-transparent px-1.5 text-xs shadow-none hover:bg-accent dark:bg-transparent dark:hover:bg-accent"
             />
             <ThinkingLevelSelect
@@ -148,11 +148,11 @@ export function SessionFollowUp({
       />
       {modelConnections.length === 0 && !modelsLoading ? (
         <p className="mt-2 text-xs text-muted-foreground">
-          Add a model connection in{" "}
+          请先在
           <Link href="/settings" className="underline underline-offset-2">
-            Settings
-          </Link>{" "}
-          before continuing.
+            设置
+          </Link>
+          中添加模型连接，再继续。
         </p>
       ) : null}
       {error ? <p className="mt-2 text-xs text-destructive">{error}</p> : null}

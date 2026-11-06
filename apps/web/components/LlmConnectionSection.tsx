@@ -17,19 +17,19 @@ import { defaultModelSelection, parseModelSelection } from "@/lib/model-selectio
 const ENDPOINT_OPTIONS = [
   {
     id: "openai-completions",
-    label: "OpenAI-compatible · Chat Completions",
+    label: "OpenAI 兼容 · Chat Completions",
     provider: "openai-compatible",
     api: "openai-completions",
   },
   {
     id: "openai-responses",
-    label: "OpenAI-compatible · Responses",
+    label: "OpenAI 兼容 · Responses",
     provider: "openai-compatible",
     api: "openai-responses",
   },
   {
     id: "litellm",
-    label: "LiteLLM proxy",
+    label: "LiteLLM 代理",
     provider: "litellm",
     api: "openai-completions",
   },
@@ -102,7 +102,7 @@ export function LlmConnectionSection({
       await onChanged();
       setOpen(false);
       setForm((current) => ({ ...current, apiKey: "", isDefault: false }));
-      onNotice("Model connection saved.", "success");
+      onNotice("模型连接已保存。", "success");
     } catch (cause) {
       reportError(cause);
     } finally {
@@ -116,7 +116,7 @@ export function LlmConnectionSection({
     setError(null);
     try {
       await api.testLlmConnection(form);
-      onNotice("Connection test succeeded.", "success");
+      onNotice("连接测试成功。", "success");
     } catch (cause) {
       reportError(cause);
     } finally {
@@ -130,7 +130,7 @@ export function LlmConnectionSection({
     try {
       await api.deleteLlmConnection(id);
       await onChanged();
-      onNotice("Model connection deleted.", "success");
+      onNotice("模型连接已删除。", "success");
     } catch (cause) {
       reportError(cause);
     } finally {
@@ -146,7 +146,7 @@ export function LlmConnectionSection({
     try {
       await api.setDefaultLlmConnection(selection.connectionId, selection.modelId);
       await onChanged();
-      onNotice("Default model updated.", "success");
+      onNotice("默认模型已更新。", "success");
     } catch (cause) {
       reportError(cause);
     } finally {
@@ -159,32 +159,30 @@ export function LlmConnectionSection({
       {connections.length > 0 && (
         <>
           <section className="rounded-xl border border-border bg-card p-4">
-            <h3 className="text-sm font-medium">Default model</h3>
+            <h3 className="text-sm font-medium">默认模型</h3>
             <p className="mt-1 text-xs text-muted-foreground">
-              New tasks start with this model. You can still choose another model per task.
+              新任务默认使用此模型，每个任务仍可单独选择其他模型。
             </p>
             <ModelSelect
               connections={connections}
               value={defaultModelSelection(connections)}
               onChange={(value) => void makeDefault(value)}
               disabled={busy !== null}
-              ariaLabel="Default model"
+              ariaLabel="默认模型"
               className="mt-3 w-full max-w-sm justify-between"
             />
           </section>
           <div className="pt-3">
-            <h3 className="text-sm font-medium">Connections</h3>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Authentication and model catalogs available to your tasks.
-            </p>
+            <h3 className="text-sm font-medium">连接</h3>
+            <p className="mt-1 text-xs text-muted-foreground">任务可用的认证信息和模型列表。</p>
           </div>
           <LlmConnectionTable connections={connections} busyId={busy} onRemove={remove} />
         </>
       )}
       <section className="rounded-xl border border-border bg-card p-4">
-        <h3 className="text-sm font-medium">Add a model</h3>
+        <h3 className="text-sm font-medium">添加模型</h3>
         <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-          Connect your AI subscription or define a custom model endpoint
+          连接你的 AI 订阅，或自定义模型端点
         </div>
         <div className="mt-3 flex flex-wrap gap-2">
           <Button
@@ -194,12 +192,12 @@ export function LlmConnectionSection({
             variant="outline"
             size="sm"
           >
-            Connect Codex
+            连接 Codex
           </Button>
         </div>
         <div className="my-4 flex items-center gap-3 text-xs text-muted-foreground">
           <span className="h-px flex-1 bg-border" />
-          or
+          或
           <span className="h-px flex-1 bg-border" />
         </div>
         {open ? (
@@ -207,19 +205,19 @@ export function LlmConnectionSection({
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="grid gap-1.5 text-xs">
                 <span>
-                  Name <RequiredMark />
+                  名称 <RequiredMark />
                 </span>
                 <input
                   className="h-9 rounded-md border bg-background px-3"
                   value={form.displayName}
                   onChange={(e) => update("displayName", e.target.value)}
-                  placeholder="My model gateway"
+                  placeholder="我的模型网关"
                   required
                 />
               </label>
               <label className="grid gap-1.5 text-xs">
                 <span className="flex items-center gap-1">
-                  Endpoint <RequiredMark />
+                  端点 <RequiredMark />
                 </span>
                 <select
                   className="h-9 rounded-md border bg-background px-3"
@@ -249,13 +247,13 @@ export function LlmConnectionSection({
               </label>
               <label className="grid gap-1.5 text-xs">
                 <span>
-                  Model <RequiredMark />
+                  模型 <RequiredMark />
                 </span>
                 <input
                   className="h-9 rounded-md border bg-background px-3"
                   value={form.model}
                   onChange={(e) => update("model", e.target.value)}
-                  placeholder="model-name"
+                  placeholder="模型名称"
                   required
                 />
               </label>
@@ -267,7 +265,7 @@ export function LlmConnectionSection({
                   className="h-9 rounded-md border bg-background px-3"
                   value={form.apiKey}
                   onChange={(e) => update("apiKey", e.target.value)}
-                  placeholder="Your provider key"
+                  placeholder="提供方的 API key"
                   type="password"
                   autoComplete="new-password"
                   required
@@ -275,15 +273,15 @@ export function LlmConnectionSection({
               </label>
             </div>
             <p className="mt-3 flex items-center gap-1 text-xs text-muted-foreground">
-              All credentials are encrypted
-              <InfoTooltip label="Credential handling details">
-                Credentials are stored encrypted and passed only to the isolated task process.
+              所有凭证均加密存储
+              <InfoTooltip label="凭证处理说明">
+                凭证加密存储，并且只传递给隔离的任务进程。
               </InfoTooltip>
             </p>
             {error && <p className="mt-3 text-sm text-destructive">{error}</p>}
             <div className="mt-4 flex justify-end gap-2">
               <Button type="button" onClick={() => setOpen(false)} variant="outline" size="sm">
-                Cancel
+                取消
               </Button>
               <Button
                 type="button"
@@ -293,11 +291,11 @@ export function LlmConnectionSection({
                 size="sm"
               >
                 <TestTube2Icon className="size-3.5" />
-                {busy === "test" ? "Testing…" : "Test"}
+                {busy === "test" ? "测试中…" : "测试"}
               </Button>
-              <InfoTooltip label="What the test does">
-                Sends a one-token request using this endpoint, API format, model, and key. Your
-                provider may count it as usage.
+              <InfoTooltip label="测试说明">
+                使用此端点、API 格式、模型和 key 发送一个单 token
+                请求。提供方可能会将其计入用量。
               </InfoTooltip>
               <Button
                 type="button"
@@ -305,7 +303,7 @@ export function LlmConnectionSection({
                 disabled={busy !== null || !formReady}
                 size="sm"
               >
-                {busy === "save" ? "Saving…" : "Save"}
+                {busy === "save" ? "保存中…" : "保存"}
               </Button>
             </div>
           </div>
@@ -317,7 +315,7 @@ export function LlmConnectionSection({
             size="sm"
             className="border-dashed text-muted-foreground"
           >
-            <PlusIcon className="size-3.5" /> Add custom model
+            <PlusIcon className="size-3.5" /> 添加自定义模型
           </Button>
         )}
       </section>

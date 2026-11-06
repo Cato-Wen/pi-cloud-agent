@@ -54,7 +54,7 @@ export function PersonalTokenCard({ onNotice }: { onNotice: Notify }) {
       setDraft("");
       setReplacing(false);
       announceChange();
-      onNotice("Personal token saved.", "success");
+      onNotice("个人 token 已保存。", "success");
     } catch (cause) {
       setError(detail(cause));
     } finally {
@@ -68,7 +68,7 @@ export function PersonalTokenCard({ onNotice }: { onNotice: Notify }) {
       await api.deletePersonalToken();
       setStatus(await api.getPersonalToken());
       announceChange();
-      onNotice("Personal token removed.", "success");
+      onNotice("个人 token 已删除。", "success");
     } catch (cause) {
       onNotice(detail(cause), "error");
     } finally {
@@ -86,10 +86,10 @@ export function PersonalTokenCard({ onNotice }: { onNotice: Notify }) {
           <KeyRoundIcon className="size-5" />
         </div>
         <div className="min-w-0 flex-1">
-          <h3 className="text-sm font-medium">Personal access token</h3>
+          <h3 className="text-sm font-medium">个人访问 token（PAT）</h3>
           <p className="mt-1 text-xs leading-5 text-muted-foreground">
-            Lets tasks clone, commit, push and open pull requests <strong>as you</strong>.
-            Stored encrypted on the server and never shown again.
+            让任务以<strong>你的身份</strong>克隆、提交、推送和创建 pull request。token
+            在服务器上加密存储，之后不再显示。
           </p>
 
           {status?.connected ? <TokenStatus status={status} /> : null}
@@ -119,7 +119,7 @@ export function PersonalTokenCard({ onNotice }: { onNotice: Notify }) {
                 variant="outline"
                 onClick={() => setReplacing(true)}
               >
-                Replace
+                更换
               </Button>
               <Button
                 type="button"
@@ -128,7 +128,7 @@ export function PersonalTokenCard({ onNotice }: { onNotice: Notify }) {
                 disabled={busy}
                 onClick={() => setConfirmingRemove(true)}
               >
-                Remove
+                删除
               </Button>
             </div>
           ) : null}
@@ -138,10 +138,10 @@ export function PersonalTokenCard({ onNotice }: { onNotice: Notify }) {
       </div>
       <ConfirmDialog
         open={confirmingRemove}
-        title="Remove your personal token?"
-        description="Tasks on repositories that only this token can reach will stop until you add another one."
-        confirmLabel="Remove"
-        busyLabel="Removing…"
+        title="删除你的个人 token？"
+        description="只有此 token 才能访问的仓库上的任务将会停止，直到你添加新的 token。"
+        confirmLabel="删除"
+        busyLabel="删除中…"
         busy={busy}
         onCancel={() => setConfirmingRemove(false)}
         onConfirm={() => void remove()}
@@ -179,16 +179,16 @@ function TokenForm({
         spellCheck={false}
         value={draft}
         onChange={(event) => onChange(event.target.value)}
-        placeholder="ghp_… or github_pat_…"
-        aria-label="GitHub personal access token"
+        placeholder="ghp_… 或 github_pat_…"
+        aria-label="GitHub 个人访问 token"
         className="h-9 min-w-0 flex-1 rounded-lg border border-input bg-background px-3 font-mono text-xs outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
       />
       <Button type="submit" size="sm" disabled={busy || draft.trim().length < 20}>
-        {busy ? "Checking…" : "Save"}
+        {busy ? "检查中…" : "保存"}
       </Button>
       {cancellable ? (
         <Button type="button" size="sm" variant="ghost" onClick={onCancel}>
-          Cancel
+          取消
         </Button>
       ) : null}
     </form>
@@ -213,17 +213,17 @@ function statusBadge(
   status: PersonalTokenStatus,
   expiry: { label: string; soon: boolean },
 ): { text: string; tone: StatusTone } {
-  if (status.state === "invalid") return { text: "Invalid or expired", tone: "err" };
-  if (status.pendingHint) return { text: "Waiting for approval", tone: "warn" };
-  if (expiry.soon) return { text: `Expires ${expiry.label}`, tone: "warn" };
-  return { text: "Valid", tone: "ok" };
+  if (status.state === "invalid") return { text: "已失效或过期", tone: "err" };
+  if (status.pendingHint) return { text: "等待组织审批", tone: "warn" };
+  if (expiry.soon) return { text: `${expiry.label} 到期`, tone: "warn" };
+  return { text: "有效", tone: "ok" };
 }
 
 function summaryLine(status: PersonalTokenStatus, expiryLabel: string): string {
   const parts = [status.kind ?? "token", `…${status.last4}`];
   if (status.login) parts.push(status.login);
-  if (status.scopes.length > 0) parts.push(`scopes ${status.scopes.join(", ")}`);
-  parts.push(status.expiresAt ? `expires ${expiryLabel}` : "no expiry");
+  if (status.scopes.length > 0) parts.push(`scope：${status.scopes.join(", ")}`);
+  parts.push(status.expiresAt ? `${expiryLabel} 到期` : "不过期");
   return parts.join(" · ");
 }
 
@@ -234,17 +234,16 @@ function StatusDetail({ status }: { status: PersonalTokenStatus }) {
         role="alert"
         className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 leading-5 text-red-700 dark:text-red-300"
       >
-        GitHub rejected this token. Tasks on repositories that need it will fail until you
-        replace it.
+        GitHub 已拒绝此 token。需要它的仓库上的任务将会失败，直到你更换 token。
       </p>
     );
   }
   if (status.pendingHint) {
     return (
       <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 leading-5 text-amber-800 dark:text-amber-300">
-        The token is valid but cannot see any private repository yet. Fine-grained tokens for an
-        organization need an owner&apos;s approval. You can wait, or replace it with a classic
-        token (<code>repo</code> + <code>workflow</code>) to start now.
+        此 token 有效，但目前还看不到任何私有仓库。组织的 fine-grained token 需要组织 owner
+        审批。你可以等待，也可以换成带 <code>repo</code> + <code>workflow</code> 的 classic
+        token，立即开始。
       </p>
     );
   }
@@ -252,11 +251,11 @@ function StatusDetail({ status }: { status: PersonalTokenStatus }) {
   const more = status.writableRepos.length - 3;
   return (
     <p className="text-muted-foreground">
-      Can write:{" "}
+      可写仓库：
       {status.writableRepos.length === 0
-        ? "no repositories"
+        ? "无"
         : more > 0
-          ? `${shown} and ${more} more`
+          ? `${shown} 及另外 ${more} 个`
           : shown}
     </p>
   );
@@ -265,21 +264,19 @@ function StatusDetail({ status }: { status: PersonalTokenStatus }) {
 function CreationGuide() {
   return (
     <details className="mt-3 text-xs text-muted-foreground">
-      <summary className="cursor-pointer text-foreground">How to create a token</summary>
+      <summary className="cursor-pointer text-foreground">如何创建 token</summary>
       <ol className="mt-2 list-decimal space-y-1.5 pl-4 leading-5">
         <li>
-          <strong>Classic (recommended, works immediately):</strong> GitHub → Settings →
-          Developer settings → Tokens (classic) → Generate new token. Check <code>repo</code>{" "}
-          and <code>workflow</code>, nothing else.
+          <strong>Classic（推荐，立即可用）：</strong>GitHub → Settings → Developer settings →
+          Tokens (classic) → Generate new token。只勾选 <code>repo</code> 和{" "}
+          <code>workflow</code>，其他都不要勾。
         </li>
         <li>
-          <strong>Fine-grained (narrower, needs organization approval):</strong> choose your
-          organization as resource owner, select only the repositories you work on, and grant
-          Contents and Pull requests read &amp; write.
+          <strong>Fine-grained（范围更小，需要组织审批）：</strong>选择你的组织作为 resource
+          owner，只选择你参与的仓库，并授予 Contents 和 Pull requests 的 read &amp; write 权限。
         </li>
         <li>
-          If the token shows <strong>Configure SSO</strong>, authorize your organization before
-          saving it here.
+          如果 token 显示 <strong>Configure SSO</strong>，请先为你的组织授权，再在这里保存。
         </li>
       </ol>
     </details>

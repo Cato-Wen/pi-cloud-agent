@@ -36,8 +36,8 @@ export function SidebarResizeHandle({
   return (
     <button
       type="button"
-      aria-label={`${side === "left" ? "Navigation" : "Changes"} sidebar resize handle`}
-      title="Drag to resize"
+      aria-label={`${side === "left" ? "导航" : "变更"}侧边栏宽度调节手柄`}
+      title="拖动调整宽度"
       className={cn(
         "group pointer-events-auto absolute inset-y-0 z-20 m-0 w-2 cursor-col-resize border-0 bg-transparent p-0 touch-none transition-colors hover:bg-border/40 focus-visible:bg-border/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/70",
         side === "left" ? "-right-px" : "-left-px",

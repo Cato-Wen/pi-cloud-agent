@@ -97,7 +97,7 @@ export function AccountMenu({ compact = false, placement = "top" }: AccountMenuP
             ) : (
               <SunIcon className="size-3.5" />
             )}
-            {theme === "light" ? "Dark mode" : "Light mode"}
+            {theme === "light" ? "深色模式" : "浅色模式"}
           </button>
           <Link
             href="/settings"
@@ -106,7 +106,7 @@ export function AccountMenu({ compact = false, placement = "top" }: AccountMenuP
             onClick={() => setOpen(false)}
           >
             <Settings2Icon className="size-3.5" />
-            Settings
+            设置
           </Link>
           <Link
             href="/plugins"
@@ -115,7 +115,7 @@ export function AccountMenu({ compact = false, placement = "top" }: AccountMenuP
             onClick={() => setOpen(false)}
           >
             <PuzzleIcon className="size-3.5" />
-            Plugins
+            插件
           </Link>
           {user?.isOperator && (
             <Link
@@ -125,7 +125,7 @@ export function AccountMenu({ compact = false, placement = "top" }: AccountMenuP
               onClick={() => setOpen(false)}
             >
               <KeyRoundIcon className="size-3.5" />
-              Admin · Credentials
+              管理 · 平台凭证
             </Link>
           )}
           <button
@@ -135,7 +135,7 @@ export function AccountMenu({ compact = false, placement = "top" }: AccountMenuP
             onClick={() => void logout()}
           >
             <LogOutIcon className="size-3.5" />
-            Log out
+            退出登录
           </button>
         </div>
       )}
@@ -175,5 +175,5 @@ function Avatar({ user, compact = false }: { user: AppUserSummary | null; compac
 }
 
 function userName(user: AppUserSummary | null): string {
-  return user?.displayName || user?.login || "Account";
+  return user?.displayName || user?.login || "账户";
 }

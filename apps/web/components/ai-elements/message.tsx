@@ -30,7 +30,7 @@ function LinkSafetyModal({ url, isOpen, onClose, onConfirm }: LinkSafetyModalPro
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <button
-        aria-label="Close"
+        aria-label="关闭"
         className="absolute inset-0 bg-background/50 backdrop-blur-sm"
         data-streamdown="link-safety-modal"
         onClick={onClose}
@@ -46,11 +46,9 @@ function LinkSafetyModal({ url, isOpen, onClose, onConfirm }: LinkSafetyModalPro
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2 text-lg font-semibold">
             <ExternalLinkIcon className="size-5" />
-            <span>Open external link?</span>
+            <span>打开外部链接？</span>
           </div>
-          <p className="text-sm text-muted-foreground">
-            You are about to leave this app and visit an external website.
-          </p>
+          <p className="text-sm text-muted-foreground">即将离开本应用，访问外部网站。</p>
         </div>
         <div
           className={cn(
@@ -62,7 +60,7 @@ function LinkSafetyModal({ url, isOpen, onClose, onConfirm }: LinkSafetyModalPro
         </div>
         <div className="flex gap-2">
           <Button className="flex-1" onClick={onClose} type="button" variant="outline">
-            Cancel
+            取消
           </Button>
           <Button
             className="flex-1"
@@ -73,7 +71,7 @@ function LinkSafetyModal({ url, isOpen, onClose, onConfirm }: LinkSafetyModalPro
             type="button"
           >
             <ExternalLinkIcon className="size-4" />
-            Open link
+            打开链接
           </Button>
         </div>
       </div>

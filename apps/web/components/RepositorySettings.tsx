@@ -58,22 +58,22 @@ export function RepositorySettings() {
     <section>
       <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h2 className="text-xl font-medium tracking-[-0.02em]">Repositories</h2>
+          <h2 className="text-xl font-medium tracking-[-0.02em]">仓库</h2>
           <p className="mt-2 max-w-lg text-xs leading-5 text-muted-foreground">
-            Auto-review runs when a non-draft PR is opened or updated. Existing PRs wait for the
-            next push. Reviews use your default model. An environment image is the public Docker
-            image used to start new sessions for a repository.
+            非草稿 PR 创建或更新时会自动评审；已有的 PR
+            要等到下一次推送。评审使用你的默认模型。环境镜像是为仓库启动新会话时使用的公开
+            Docker 镜像。
           </p>
         </div>
         <div className="flex items-center gap-3">
           {data?.installUrl && (
             <a href={data.installUrl} className="text-xs underline underline-offset-4">
-              Manage GitHub access
+              管理 GitHub 访问权限
             </a>
           )}
           <Button variant="outline" size="sm" disabled={loading} onClick={() => void load()}>
             <RefreshCwIcon className={loading ? "animate-spin" : ""} />
-            Refresh
+            刷新
           </Button>
         </div>
       </div>
@@ -87,28 +87,25 @@ export function RepositorySettings() {
           {data.problem}
         </p>
       )}
-      {loading && !data && (
-        <p className="py-8 text-sm text-muted-foreground">Loading repositories…</p>
-      )}
+      {loading && !data && <p className="py-8 text-sm text-muted-foreground">正在加载仓库…</p>}
       {!loading && !error && rows.length === 0 && (
         <p className="rounded-xl border border-dashed border-border p-6 text-sm text-muted-foreground">
-          No repositories connected. Use GitHub access above to install the App, then return
-          here.
+          尚未连接任何仓库。请先通过上方的 GitHub 访问权限安装 App，再回到这里。
         </p>
       )}
       {rows.length > 0 && (
         <div className="overflow-hidden rounded-xl border border-border">
           <div className="hidden grid-cols-[minmax(0,1fr)_minmax(0,1fr)_5.5rem] gap-4 border-b border-border bg-muted/30 px-4 py-2.5 text-xs text-muted-foreground sm:grid">
-            <span>Repository</span>
+            <span>仓库</span>
             <span className="flex items-center gap-1.5">
-              Environment image
-              <InfoTooltip label="Environment image requirements">
-                Use a public Docker image from Docker Hub or GHCR with the tools your project
-                needs. The app adds its agent runtime and manages the checkout inside the
-                isolated sandbox.
+              环境镜像
+              <InfoTooltip label="环境镜像要求">
+                使用 Docker Hub 或 GHCR 上的公开 Docker
+                镜像，并包含项目所需的工具。应用会自动加入 agent
+                运行时，并在隔离沙箱中管理代码检出。
               </InfoTooltip>
             </span>
-            <span className="text-right">Auto-review</span>
+            <span className="text-right">自动评审</span>
           </div>
           <ul className="divide-y divide-border">
             {rows.map((row) => (
@@ -126,8 +123,7 @@ export function RepositorySettings() {
         </div>
       )}
       <p className="mt-4 text-xs leading-5 text-muted-foreground">
-        Environment changes save when you leave the field and apply to new sessions. Leave blank
-        to use the default image.
+        环境镜像在离开输入框时自动保存，并对新会话生效。留空则使用默认镜像。
       </p>
     </section>
   );
@@ -169,9 +165,7 @@ function RepositoryRow({
   };
   const problem =
     review?.problem ??
-    (provider === "github" && !review
-      ? "Install the GitHub App on this repository to enable reviews."
-      : null);
+    (provider === "github" && !review ? "在此仓库上安装 GitHub App 后即可启用评审。" : null);
   return (
     <li className="grid items-start gap-3 px-4 py-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_5.5rem] sm:gap-4">
       <div className="min-w-0">
@@ -185,13 +179,13 @@ function RepositoryRow({
       </div>
       <EnvironmentEditor provider={provider} repo={repo} image={image} />
       <div className="flex items-center gap-2 sm:justify-end sm:pt-1">
-        <span className="text-xs text-muted-foreground sm:hidden">Auto-review</span>
+        <span className="text-xs text-muted-foreground sm:hidden">自动评审</span>
         {provider === "github" ? (
           <button
             type="button"
             role="switch"
             aria-checked={enabled}
-            aria-label={`Auto-review ${repo}`}
+            aria-label={`自动评审 ${repo}`}
             disabled={busy || !review || Boolean(problem && !enabled)}
             onClick={() => void toggle()}
             className={`relative h-5 w-9 shrink-0 rounded-full transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-40 ${enabled ? "bg-foreground" : "bg-input"}`}
@@ -232,12 +226,12 @@ function EnvironmentEditor({
     if (next === saved || busy) return;
     setBusy(true);
     setError(null);
-    setMessage("Saving…");
+    setMessage("保存中…");
     try {
       await api.saveRepositoryEnvironment({ provider, repo, imageRef: next });
       setSaved(next);
       setValue(next);
-      setMessage("Saved");
+      setMessage("已保存");
     } catch (cause) {
       setMessage(null);
       setError(cause instanceof Error ? cause.message : String(cause));
@@ -250,11 +244,11 @@ function EnvironmentEditor({
     if (!imageRef || busy || testing) return;
     setTesting(true);
     setError(null);
-    setMessage("Testing…");
+    setMessage("测试中…");
     try {
       const result = await api.testRepositoryEnvironment({ provider, repo, imageRef });
-      setMessage(result.ok ? "Environment test passed" : null);
-      if (!result.ok) setError(result.output || "Environment test failed.");
+      setMessage(result.ok ? "环境测试通过" : null);
+      if (!result.ok) setError(result.output || "环境测试失败。");
     } catch (cause) {
       setMessage(null);
       setError(cause instanceof Error ? cause.message : String(cause));
@@ -266,8 +260,8 @@ function EnvironmentEditor({
     <div>
       <div className="flex items-start gap-2">
         <input
-          aria-label={`Environment image for ${repo}`}
-          placeholder="Default image"
+          aria-label={`${repo} 的环境镜像`}
+          placeholder="默认镜像"
           value={value}
           disabled={busy || testing}
           onChange={(event) => {
@@ -288,10 +282,10 @@ function EnvironmentEditor({
             size="sm"
             disabled={busy || testing}
             onClick={() => void test()}
-            aria-label={`Test environment for ${repo}`}
+            aria-label={`测试 ${repo} 的环境`}
           >
             {testing ? <LoaderCircleIcon className="animate-spin" /> : <PlayIcon />}
-            Test
+            测试
           </Button>
         )}
       </div>

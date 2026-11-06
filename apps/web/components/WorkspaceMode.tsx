@@ -44,11 +44,11 @@ export function useWorkspaceMode() {
 export function WorkspaceModeSwitch() {
   const mode = useWorkspaceMode();
   return (
-    <nav aria-label="Workspace" className="flex rounded-lg p-0.5 text-xs">
+    <nav aria-label="工作区" className="flex rounded-lg p-0.5 text-xs">
       {(
         [
-          ["tasks", "/chat", "Tasks"],
-          ["reviews", "/reviews", "Reviews"],
+          ["tasks", "/chat", "任务"],
+          ["reviews", "/reviews", "评审"],
         ] as const
       ).map(([value, href, label]) => (
         <Link

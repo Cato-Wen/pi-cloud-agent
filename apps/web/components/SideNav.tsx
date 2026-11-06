@@ -44,7 +44,7 @@ export function SideNav() {
           }
         })
         .catch(() => {
-          if (alive) setLoadError("Could not refresh session history.");
+          if (alive) setLoadError("无法刷新会话历史。");
         });
     void load();
     const timer = setInterval(load, 5000);
@@ -100,7 +100,7 @@ export function SideNav() {
       <header className="mobile-nav">
         <WorkspaceModeSwitch />
         <div className="flex items-center gap-1">
-          <MobileLink href="/chat" label="New task" active={pathname === "/chat"}>
+          <MobileLink href="/chat" label="新建任务" active={pathname === "/chat"}>
             <PlusIcon />
           </MobileLink>
           <AccountMenu compact placement="bottom" />
@@ -117,7 +117,7 @@ export function SideNav() {
           {mode === "tasks" && (
             <Link href="/chat" className="history-link">
               <PlusIcon className="size-3.5 shrink-0" />
-              New task
+              新建任务
             </Link>
           )}
         </div>
@@ -130,7 +130,7 @@ export function SideNav() {
           )}
           {active.length > 0 && (
             <SessionGroup
-              label="Running"
+              label="进行中"
               sessions={active}
               pathname={pathname}
               titles={titles}
@@ -141,7 +141,7 @@ export function SideNav() {
           )}
           {pinned.length > 0 && (
             <SessionGroup
-              label="Pinned"
+              label="已置顶"
               sessions={pinned}
               pathname={pathname}
               titles={titles}
@@ -152,7 +152,7 @@ export function SideNav() {
           )}
           {recent.length > 0 && (
             <SessionGroup
-              label="Recent"
+              label="最近"
               sessions={recent}
               pathname={pathname}
               titles={titles}
@@ -162,9 +162,7 @@ export function SideNav() {
             />
           )}
           {sessions.length === 0 && (
-            <p className="px-2 py-3 text-xs text-muted-foreground/80">
-              Your sessions will appear here.
-            </p>
+            <p className="px-2 py-3 text-xs text-muted-foreground/80">你的会话会显示在这里。</p>
           )}
         </div>
 
@@ -174,10 +172,10 @@ export function SideNav() {
       </aside>
       <ConfirmDialog
         open={deleteTarget !== null}
-        title={deleteTarget ? `Delete “${deleteTarget.title || "session"}”` : "Delete session"}
-        description="This permanently deletes the session, its chat history, and its sandbox checkpoint."
-        confirmLabel="Delete"
-        busyLabel="Deleting…"
+        title={deleteTarget ? `删除“${deleteTarget.title || "会话"}”` : "删除会话"}
+        description="此操作会永久删除该会话、它的聊天记录以及沙箱检查点。"
+        confirmLabel="删除"
+        busyLabel="删除中…"
         busy={pendingActionId === deleteTarget?.id}
         error={deleteError}
         onCancel={() => {
@@ -230,10 +228,10 @@ function SessionGroup({
             </Link>
             {session.retentionStatus === "inactive" && (
               <span
-                title={`Inactive after ${formatDuration(session.inactiveAfterSeconds)} without activity`}
+                title={`超过 ${formatDuration(session.inactiveAfterSeconds)} 无活动后进入不活跃状态`}
                 className="shrink-0 text-[10px] text-muted-foreground"
               >
-                inactive
+                不活跃
               </span>
             )}
             {session.status !== "idle" && (
@@ -242,8 +240,8 @@ function SessionGroup({
             <div className="flex w-0 shrink-0 items-center gap-0.5 overflow-hidden border-l border-transparent bg-inherit pl-1 opacity-0 transition-[width,opacity,border-color] duration-150 group-hover:w-14 group-hover:border-border/70 group-hover:opacity-100 group-focus-within:w-14 group-focus-within:border-border/70 group-focus-within:opacity-100">
               <button
                 type="button"
-                aria-label={session.pinned ? "Unpin session" : "Pin session"}
-                title={session.pinned ? "Unpin session" : "Pin session"}
+                aria-label={session.pinned ? "取消置顶会话" : "置顶会话"}
+                title={session.pinned ? "取消置顶会话" : "置顶会话"}
                 disabled={pendingActionId === session.id}
                 onClick={() => void onTogglePin(session)}
                 className="rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-50"
@@ -252,8 +250,8 @@ function SessionGroup({
               </button>
               <button
                 type="button"
-                aria-label="Delete session"
-                title="Delete session"
+                aria-label="删除会话"
+                title="删除会话"
                 disabled={pendingActionId === session.id}
                 onClick={() => onDelete(session)}
                 className="rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-50"
@@ -275,7 +273,7 @@ function sessionLabel(session: SessionSummary): string {
 
 function Brand() {
   return (
-    <Link href="/chat" className="flex items-center gap-2 px-0.5" aria-label="zen8agent home">
+    <Link href="/chat" className="flex items-center gap-2 px-0.5" aria-label="zen8agent 首页">
       <span className="flex size-[26px] items-center justify-center rounded-lg border border-border bg-white">
         <Image src="/assets/z8l-logo.png" alt="" width={16} height={16} priority />
       </span>
@@ -290,7 +288,7 @@ function CollapseButton() {
     <button
       type="button"
       onClick={toggle}
-      aria-label="Collapse sidebar"
+      aria-label="收起侧边栏"
       className="grid size-6 place-items-center rounded-md text-muted-foreground/70 transition-colors hover:bg-accent hover:text-foreground"
     >
       <PanelLeftIcon className="size-4" />

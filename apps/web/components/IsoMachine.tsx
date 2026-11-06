@@ -173,7 +173,7 @@ export function IsoMachine() {
       viewBox={`${view.minX} ${view.minY} ${view.width} ${view.height}`}
       className="h-full w-full"
       role="img"
-      aria-label="Isometric machine built from cubes"
+      aria-label="由立方体组成的等轴测机器"
     >
       <defs>
         <pattern id="iso-grid" width={COS30 * 2} height={UNIT} patternUnits="userSpaceOnUse">

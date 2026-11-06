@@ -13,8 +13,8 @@ export function ModelSelect({
   value,
   onChange,
   disabled = false,
-  placeholder = "Model",
-  ariaLabel = "Model",
+  placeholder = "模型",
+  ariaLabel = "模型",
   className,
 }: {
   connections: LlmConnectionSummary[];

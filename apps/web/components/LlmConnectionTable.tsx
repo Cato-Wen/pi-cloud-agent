@@ -25,10 +25,10 @@ export function LlmConnectionTable({
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border text-left text-xs text-muted-foreground">
-              <th className="px-4 py-2.5 font-medium">Name</th>
-              <th className="px-4 py-2.5 font-medium">Models</th>
+              <th className="px-4 py-2.5 font-medium">名称</th>
+              <th className="px-4 py-2.5 font-medium">模型</th>
               <th className="px-4 py-2.5">
-                <span className="sr-only">Actions</span>
+                <span className="sr-only">操作</span>
               </th>
             </tr>
           </thead>
@@ -50,14 +50,14 @@ export function LlmConnectionTable({
       </div>
       <ConfirmDialog
         open={removing !== null}
-        title={`Delete ${removing?.displayName ?? "connection"}?`}
+        title={`删除 ${removing?.displayName ?? "连接"}？`}
         description={
           removing?.isDefault
-            ? "It will disappear from Settings. Existing sessions switch to another default when resumed."
-            : "It will disappear from Settings. Existing sessions switch to the default when resumed."
+            ? "它将从设置中消失。已有会话恢复时会切换到另一个默认模型。"
+            : "它将从设置中消失。已有会话恢复时会切换到默认模型。"
         }
-        confirmLabel="Delete"
-        busyLabel="Deleting…"
+        confirmLabel="删除"
+        busyLabel="删除中…"
         busy={removing !== null && busyId === removing.id}
         onCancel={() => setRemoving(null)}
         onConfirm={() => {
@@ -117,7 +117,7 @@ function ConnectionRows({
               onClick={onToggleExpanded}
               className="flex items-center gap-1 text-xs whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground"
             >
-              {connection.models.length} models
+              {connection.models.length} 个模型
               <ChevronDownIcon
                 className={cn(
                   "size-3.5 transition-transform duration-200 motion-reduce:transition-none",
@@ -137,7 +137,7 @@ function ConnectionRows({
               size="sm"
             >
               <Trash2Icon className="size-3.5" />
-              Delete
+              删除
             </Button>
           </div>
         </td>

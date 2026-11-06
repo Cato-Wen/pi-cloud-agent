@@ -114,7 +114,7 @@ function NewSession() {
     setError(null);
     try {
       const selection = parseModelSelection(modelSelection);
-      if (!selection) throw new Error("choose a model before starting a task");
+      if (!selection) throw new Error("开始任务前请先选择模型");
       const session = await api.createSession({
         repo,
         provider,
@@ -135,19 +135,19 @@ function NewSession() {
   return (
     <div className="flex h-full min-h-0 flex-col bg-background">
       <header className="app-header flex h-12 shrink-0 items-center px-4">
-        <h1 className="text-[13px] font-medium">New task</h1>
+        <h1 className="text-[13px] font-medium">新建任务</h1>
       </header>
       <div className="flex min-h-0 flex-1 items-center justify-center overflow-y-auto px-4 py-10 sm:px-8">
         <div className="w-full max-w-2xl">
           <div className="mb-6 text-center">
-            <h2 className="text-xl font-medium tracking-[-0.02em]">What are you up to?</h2>
+            <h2 className="text-xl font-medium tracking-[-0.02em]">今天要做什么？</h2>
           </div>
           <ChatComposer
             value={prompt}
             onChange={setPrompt}
             onSubmit={submit}
-            placeholder="Describe the task for Pi…"
-            submitLabel="Start"
+            placeholder="描述要让 Pi 完成的任务…"
+            submitLabel="开始"
             submitEnabled={canSubmit}
             submitting={submitting}
             disabled={!repo}
@@ -179,22 +179,22 @@ function NewSession() {
           <p className="mt-3 px-2 text-center text-xs text-muted-foreground">
             {modelConnections.length === 0 ? (
               <>
-                Add a model connection in{" "}
+                开始任务前，请先在
                 <Link href="/settings" className="underline underline-offset-2">
-                  Settings
-                </Link>{" "}
-                before starting a task.
+                  设置
+                </Link>
+                中添加模型连接。
               </>
             ) : repos.length === 0 ? (
               <>
-                Connect a VCS identity in{" "}
+                请先在
                 <Link href="/settings" className="underline underline-offset-2">
-                  Settings
-                </Link>{" "}
-                to choose a repository.
+                  设置
+                </Link>
+                中连接 VCS 身份，再选择仓库。
               </>
             ) : (
-              "Choose a repository and describe the task for the agent."
+              "选择仓库，然后描述要让 agent 完成的任务。"
             )}
           </p>
           {error && (
@@ -236,7 +236,7 @@ function ComposerOptions(props: ComposerOptionsProps) {
       <FolderGit2Icon className="size-3.5 shrink-0 text-muted-foreground" />
       {props.repos.length === 0 ? (
         <input
-          aria-label="Repository"
+          aria-label="仓库"
           className="h-7 w-32 min-w-0 border-0 bg-transparent px-1.5 text-xs outline-none placeholder:text-muted-foreground"
           placeholder="owner/repo"
           value={props.repo}
@@ -250,8 +250,8 @@ function ComposerOptions(props: ComposerOptionsProps) {
             if (selected) props.onRepoChange(selected);
           }}
         >
-          <SelectTrigger aria-label="Repository" className={triggerClass}>
-            <SelectValue placeholder="Repository" />
+          <SelectTrigger aria-label="仓库" className={triggerClass}>
+            <SelectValue placeholder="仓库" />
           </SelectTrigger>
           <SelectContent align="start">
             {props.repos.map((entry) => (
@@ -268,8 +268,8 @@ function ComposerOptions(props: ComposerOptionsProps) {
         onValueChange={(value) => props.onBranchChange(value ?? "")}
         disabled={props.branchesLoading || props.branches.length === 0}
       >
-        <SelectTrigger aria-label="Branch" className={triggerClass}>
-          <SelectValue placeholder={props.branchesLoading ? "Loading…" : "Branch"} />
+        <SelectTrigger aria-label="分支" className={triggerClass}>
+          <SelectValue placeholder={props.branchesLoading ? "加载中…" : "分支"} />
         </SelectTrigger>
         <SelectContent>
           {props.branches.map((name) => (

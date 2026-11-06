@@ -29,8 +29,8 @@ export function ChatComposer({
   value,
   onChange,
   onSubmit,
-  placeholder = "Give Pi a task…",
-  submitLabel = "Send",
+  placeholder = "给 Pi 一个任务…",
+  submitLabel = "发送",
   submitEnabled,
   submitting = false,
   disabled = false,
@@ -46,7 +46,7 @@ export function ChatComposer({
 
   return (
     <PromptInput
-      aria-label="Agent message"
+      aria-label="发给 agent 的消息"
       onSubmit={() => {
         if (canSubmit) return onSubmit();
       }}
@@ -64,7 +64,7 @@ export function ChatComposer({
         <div className="ml-auto flex shrink-0 items-center">
           <PromptInputSubmit
             aria-label={
-              stopsActiveRun ? (stopping ? "Stopping agent" : "Stop agent") : submitLabel
+              stopsActiveRun ? (stopping ? "正在停止 agent" : "停止 agent") : submitLabel
             }
             disabled={stopsActiveRun ? stopping || !onStop : !canSubmit}
             status={stopsActiveRun ? "streaming" : submitting ? "submitted" : "ready"}

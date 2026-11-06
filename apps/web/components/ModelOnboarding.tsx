@@ -60,17 +60,17 @@ export function ModelOnboarding() {
         </div>
         <div className="min-w-0 flex-1">
           <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-            One remaining step
+            还差一步
           </p>
           <h2 id="model-onboarding-title" className="mt-1 text-sm font-medium">
-            Connect a model
+            连接模型
           </h2>
         </div>
         <Button
           type="button"
           variant="ghost"
           size="icon-xs"
-          aria-label="Dismiss model setup"
+          aria-label="关闭模型设置提示"
           onClick={() => setDismissed(true)}
         >
           <XIcon />
@@ -78,14 +78,14 @@ export function ModelOnboarding() {
       </div>
       <div className="px-4 py-4">
         <p className="text-sm leading-6 text-muted-foreground">
-          Connect Codex or add a model API key in Settings. Tasks cannot start without a model.
+          在设置中连接 Codex 或添加模型 API key。没有模型就无法开始任务。
         </p>
         <Link
           href="/settings"
           onClick={() => setDismissed(true)}
           className="mt-3 inline-flex h-8 w-full items-center justify-center gap-1.5 rounded-lg bg-primary px-2.5 text-sm font-medium text-primary-foreground transition-colors outline-none hover:bg-primary/80 focus-visible:ring-3 focus-visible:ring-ring/50"
         >
-          Add a model
+          添加模型
         </Link>
       </div>
     </aside>,

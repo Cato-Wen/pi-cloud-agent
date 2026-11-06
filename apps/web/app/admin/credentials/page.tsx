@@ -56,8 +56,8 @@ export default function PlatformCredentialsPage() {
   return (
     <div className="h-full overflow-y-auto bg-background">
       <header className="sticky top-0 z-10 flex h-12 items-center gap-2 border-b border-border bg-background px-5 text-[13px]">
-        <span className="text-muted-foreground">Admin /</span>
-        <h1 className="font-medium">Credentials</h1>
+        <span className="text-muted-foreground">管理 /</span>
+        <h1 className="font-medium">平台凭证</h1>
       </header>
       <main className="mx-auto max-w-4xl px-5 py-8 sm:px-8">
         {isOperator === false ? <OperatorRequired /> : null}
@@ -70,7 +70,7 @@ export default function PlatformCredentialsPage() {
                 onSaved={async () => {
                   setAdding(false);
                   await refresh();
-                  notify("Token saved and probed.", "success");
+                  notify("token 已保存并探测。", "success");
                 }}
               />
             ) : null}
@@ -102,17 +102,16 @@ function PageIntro({ onAdd }: { onAdd: () => void }) {
   return (
     <div className="mb-6 flex items-start gap-4">
       <div className="min-w-0 flex-1">
-        <h2 className="text-xl font-medium tracking-[-0.02em]">Platform credentials</h2>
+        <h2 className="text-xl font-medium tracking-[-0.02em]">平台凭证</h2>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
-          One token per organization that has no GitHub App installation. The platform uses it
-          to read code on behalf of agents; saving probes every private repository the token can
-          see and records whether git allows read or write. Organizations with the App installed
-          need no token here — users write with their own sign-in.
+          每个未安装 GitHub App 的组织一个 token。平台用它代表 agent 读取代码；保存时会探测该
+          token 能看到的每个私有仓库，并记录 git 允许的是只读还是可写。已安装 App
+          的组织不需要在这里添加 token，用户用自己的登录身份写入。
         </p>
       </div>
       <Button type="button" size="sm" onClick={onAdd}>
         <PlusIcon className="size-3.5" />
-        Add token
+        添加 token
       </Button>
     </div>
   );
@@ -154,13 +153,13 @@ function AddCredentialForm({
       }}
     >
       <label className="block text-xs text-muted-foreground" htmlFor="credential-label">
-        Label
+        名称
       </label>
       <input
         id="credential-label"
         value={label}
         onChange={(event) => setLabel(event.target.value)}
-        placeholder="e.g. food-truck read-only"
+        placeholder="例如：food-truck 只读"
         className="mt-1 h-9 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
       />
       <label className="mt-3 block text-xs text-muted-foreground" htmlFor="credential-token">
@@ -187,10 +186,10 @@ function AddCredentialForm({
           size="sm"
           disabled={busy || label.trim().length === 0 || token.trim().length < 20}
         >
-          {busy ? "Probing…" : "Save & probe"}
+          {busy ? "探测中…" : "保存并探测"}
         </Button>
         <Button type="button" size="sm" variant="ghost" onClick={onCancel}>
-          Cancel
+          取消
         </Button>
       </div>
     </form>
@@ -200,7 +199,7 @@ function AddCredentialForm({
 function OperatorRequired() {
   return (
     <p className="rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
-      Operator access required. Operators are listed in <code>OPERATOR_GITHUB_LOGINS</code>.
+      需要管理员权限。管理员名单配置在 <code>OPERATOR_GITHUB_LOGINS</code> 中。
     </p>
   );
 }
@@ -208,8 +207,7 @@ function OperatorRequired() {
 function EmptyState() {
   return (
     <p className="rounded-xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
-      No platform credentials yet. Add a read-only token for each organization the App is not
-      installed on.
+      还没有平台凭证。请为每个未安装 App 的组织添加一个只读 token。
     </p>
   );
 }

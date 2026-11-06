@@ -8,17 +8,17 @@ import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
 
 const LABELS: Record<PullRequestReview["status"], string> = {
-  not_reviewed: "Not reviewed",
-  skipped: "Skipped",
-  received: "Received",
-  queued: "Queued",
-  starting: "Starting",
-  reviewing: "Reviewing",
-  publishing: "Publishing",
-  reviewed: "Reviewed",
-  outdated: "Outdated",
-  failed: "Failed",
-  cancelled: "Cancelled",
+  not_reviewed: "未评审",
+  skipped: "已跳过",
+  received: "已接收",
+  queued: "排队中",
+  starting: "启动中",
+  reviewing: "评审中",
+  publishing: "发布中",
+  reviewed: "已评审",
+  outdated: "已过期",
+  failed: "失败",
+  cancelled: "已取消",
 };
 
 export default function ReviewsPage() {
@@ -52,21 +52,21 @@ export default function ReviewsPage() {
   return (
     <div className="flex h-full min-h-0 flex-col bg-background">
       <header className="app-header flex h-12 shrink-0 items-center justify-between px-5">
-        <h1 className="text-[13px] font-medium">Reviews</h1>
+        <h1 className="text-[13px] font-medium">评审</h1>
         <Link
           href="/settings?tab=repositories"
           className="text-xs text-muted-foreground hover:text-foreground"
         >
-          Repository settings
+          仓库设置
         </Link>
       </header>
       <div className="flex-1 overflow-y-auto px-5 py-8 sm:px-8">
         <div className="mx-auto max-w-5xl">
           <div className="mb-6 flex items-start justify-between gap-4">
             <div>
-              <h2 className="text-xl font-medium tracking-[-0.02em]">Open pull requests</h2>
+              <h2 className="text-xl font-medium tracking-[-0.02em]">开放中的 PR</h2>
               <p className="mt-2 text-xs text-muted-foreground">
-                PRs from your connected repositories, including those without a review.
+                来自已连接仓库的 PR，包括尚未评审的。
               </p>
             </div>
             <Button
@@ -76,12 +76,12 @@ export default function ReviewsPage() {
               onClick={() => void refresh()}
             >
               <RefreshCwIcon className={loading ? "animate-spin" : ""} />
-              {loading ? "Refreshing…" : "Refresh"}
+              {loading ? "刷新中…" : "刷新"}
             </Button>
           </div>
           {error && (
             <p role="alert" className="mb-4 text-sm text-destructive">
-              {error} {data && "Showing the previous results."}
+              {error} {data && "当前显示的是上一次的结果。"}
             </p>
           )}
           {data?.problems.map((problem) => (
@@ -91,29 +91,26 @@ export default function ReviewsPage() {
           ))}
           {!data && loading && (
             <p role="status" className="py-10 text-center text-sm text-muted-foreground">
-              Loading pull requests from GitHub…
+              正在从 GitHub 加载 PR…
             </p>
           )}
           {data && data.pullRequests.length === 0 && (
             <div className="rounded-xl border border-dashed border-border px-6 py-12 text-center">
               <GitPullRequestIcon className="mx-auto mb-3 size-5 text-muted-foreground" />
               <p className="text-sm">
-                {data.problems.length
-                  ? "Pull requests could not be fully loaded."
-                  : "No open pull requests."}
+                {data.problems.length ? "PR 未能完整加载。" : "暂无开放中的 PR。"}
               </p>
               <p className="mt-2 text-xs text-muted-foreground">
-                Enable auto-review in repository settings, then open a non-draft PR or push a
-                new commit.
+                在仓库设置中开启自动评审，然后创建一个非草稿 PR 或推送新的提交。
               </p>
             </div>
           )}
           {Boolean(data?.pullRequests.length) && (
             <div className="overflow-hidden rounded-xl border border-border">
               <div className="hidden grid-cols-[minmax(0,1fr)_minmax(0,0.85fr)_6rem] gap-6 border-b border-border bg-muted/30 px-4 py-2.5 text-xs text-muted-foreground sm:grid">
-                <span>Pull request</span>
-                <span>Review status</span>
-                <span className="text-right">Session</span>
+                <span>PR</span>
+                <span>评审状态</span>
+                <span className="text-right">会话</span>
               </div>
               <ul className="divide-y divide-border">
                 {data?.pullRequests.map((pr) => (
@@ -124,12 +121,12 @@ export default function ReviewsPage() {
           )}
           {data && (
             <p className="mt-4 text-xs text-muted-foreground">
-              Last fetched{" "}
+              上次获取时间：
               {new Date(data.fetchedAt).toLocaleTimeString([], {
                 hour: "2-digit",
                 minute: "2-digit",
               })}
-              . Refresh to check for updates.
+              。点击刷新查看更新。
             </p>
           )}
         </div>
@@ -181,7 +178,7 @@ function ReviewRow({ pr }: { pr: PullRequestReview }) {
             href={`/sessions/${pr.sessionId}`}
             className="text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground"
           >
-            View session
+            查看会话
           </Link>
         ) : (
           <span className="text-xs text-muted-foreground">—</span>

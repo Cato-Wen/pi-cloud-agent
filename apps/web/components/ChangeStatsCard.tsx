@@ -23,10 +23,7 @@ export function ChangeStatsCard({
   const removed = files.reduce((sum, file) => sum + file.removed, 0);
   const hidden = Math.max(0, files.length - VISIBLE_COUNT);
   const visible = expanded ? files : files.slice(0, VISIBLE_COUNT);
-  const noun = files.length === 1 ? "file" : "files";
-  const title = createdOnly
-    ? `Created ${files.length} ${noun}`
-    : `Edited ${files.length} ${noun}`;
+  const title = createdOnly ? `新建了 ${files.length} 个文件` : `编辑了 ${files.length} 个文件`;
 
   return (
     <div className="overflow-hidden rounded-xl border border-border/80 bg-card">
@@ -51,7 +48,7 @@ export function ChangeStatsCard({
             <button
               type="button"
               onClick={() => onFileClick?.(file.path)}
-              aria-label={`Open changes for ${file.path}`}
+              aria-label={`查看 ${file.path} 的改动`}
               className={cn(
                 "flex w-full min-w-0 items-center justify-between gap-3 py-1 text-left",
                 onFileClick && "cursor-pointer rounded-sm transition-colors hover:bg-accent/60",
@@ -75,7 +72,7 @@ export function ChangeStatsCard({
           onClick={() => setExpanded(true)}
           className="flex w-full items-center justify-center gap-1 border-t border-border/70 px-3.5 py-2 text-xs text-muted-foreground transition-colors hover:text-foreground"
         >
-          Show {hidden} more {hidden === 1 ? "file" : "files"}
+          再显示 {hidden} 个文件
           <ChevronDownIcon className="size-3.5" />
         </button>
       ) : null}

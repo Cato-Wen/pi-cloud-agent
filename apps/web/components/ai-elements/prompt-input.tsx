@@ -129,7 +129,7 @@ export function PromptInputSubmit({
 
   return (
     <InputGroupButton
-      aria-label={generating ? "Stop" : "Submit"}
+      aria-label={generating ? "停止" : "提交"}
       className={cn("size-8 rounded-full", className)}
       onClick={handleClick}
       size="icon-sm"

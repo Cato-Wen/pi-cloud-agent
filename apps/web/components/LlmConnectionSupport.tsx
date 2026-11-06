@@ -37,27 +37,27 @@ export function InfoTooltip({ label, children }: { label: string; children: Reac
 }
 
 export function validateConnectionForm(form: CreateLlmConnectionRequest): string | null {
-  if (!form.displayName.trim()) return "Name is required";
-  if (!form.baseUrl.trim()) return "Base URL is required";
+  if (!form.displayName.trim()) return "请填写名称";
+  if (!form.baseUrl.trim()) return "请填写 Base URL";
   try {
     const url = new URL(form.baseUrl);
-    if (url.username || url.password) return "Base URL must not contain credentials";
+    if (url.username || url.password) return "Base URL 不能包含凭证";
   } catch {
-    return "Base URL must be a valid URL";
+    return "Base URL 必须是有效的 URL";
   }
-  if (!form.model.trim()) return "Model is required";
-  if (!form.apiKey.trim()) return "API key is required";
+  if (!form.model.trim()) return "请填写模型";
+  if (!form.apiKey.trim()) return "请填写 API key";
   if (
     form.contextWindow !== undefined &&
     (!Number.isInteger(form.contextWindow) || form.contextWindow < 1)
   ) {
-    return "Context window must be a positive integer";
+    return "上下文窗口必须是正整数";
   }
   if (
     form.maxTokens !== undefined &&
     (!Number.isInteger(form.maxTokens) || form.maxTokens < 1)
   ) {
-    return "Max output tokens must be a positive integer";
+    return "最大输出 token 数必须是正整数";
   }
   return null;
 }

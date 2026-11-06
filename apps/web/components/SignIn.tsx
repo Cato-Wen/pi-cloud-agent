@@ -24,11 +24,11 @@ export function SignIn() {
           style={{ animationDelay: "75ms" }}
         >
           <h1 className="max-w-md text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
-            Every task gets its own machine.
+            每个任务都有自己的机器。
           </h1>
           <p className="mt-5 max-w-md text-sm leading-relaxed text-muted-foreground">
-            Start, steer, and inspect your Pi agent, each in its own isolated sandbox, from
-            first prompt to pull request.
+            启动、引导并查看你的 Pi agent，每个任务都运行在独立的沙箱里，从第一条提示到 PR
+            全程可见。
           </p>
           <div className="mt-8">
             <a
@@ -36,7 +36,7 @@ export function SignIn() {
               className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-85"
             >
               <GitHubMark />
-              Continue with GitHub
+              使用 GitHub 登录
             </a>
           </div>
         </div>

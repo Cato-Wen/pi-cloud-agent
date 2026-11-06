@@ -35,7 +35,9 @@ export default function PluginsPage() {
     if (oauth === "connected") {
       setError(null);
     } else {
-      setError(message ? `OAuth ${oauth}: ${message}` : `OAuth ${oauth}`);
+      setError(
+        message ? `OAuth 连接失败（${oauth}）：${message}` : `OAuth 连接失败（${oauth}）`,
+      );
     }
     window.history.replaceState({}, "", "/plugins");
     void reload().catch(() => undefined);
@@ -59,10 +61,9 @@ export default function PluginsPage() {
       <header className="mb-8 flex items-start gap-3">
         <PuzzleIcon className="mt-1 size-5 text-muted-foreground" />
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">Plugins</h1>
+          <h1 className="text-xl font-semibold tracking-tight">插件</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Install marketplace plugins for skills and MCP tools. Attached skills are included
-            in the task prompt.
+            安装市场插件以获得 Skill 和 MCP 工具。已启用的 Skill 会包含在任务提示词中。
           </p>
         </div>
       </header>
@@ -75,9 +76,9 @@ export default function PluginsPage() {
 
       {isOperator && (
         <section className="mb-8 rounded-xl border border-border p-4">
-          <h2 className="text-sm font-medium">Operator</h2>
+          <h2 className="text-sm font-medium">管理员</h2>
           <p className="mt-1 text-xs text-muted-foreground">
-            Seed packages from marketplace/plugins into the catalog.
+            将 marketplace/plugins 中的插件包导入目录。
           </p>
           <button
             type="button"
@@ -89,7 +90,7 @@ export default function PluginsPage() {
               })
             }
           >
-            {busy === "seed" ? "Seeding…" : "Seed catalog"}
+            {busy === "seed" ? "导入中…" : "导入插件包"}
           </button>
         </section>
       )}
@@ -97,8 +98,8 @@ export default function PluginsPage() {
       <ul className="space-y-4">
         {plugins.length === 0 && (
           <li className="text-sm text-muted-foreground">
-            No plugins in the catalog yet.
-            {isOperator ? " Use Seed catalog above." : " Ask an operator to publish one."}
+            目录里还没有插件。
+            {isOperator ? "请使用上方的「导入插件包」。" : "请联系管理员发布。"}
           </li>
         )}
         {plugins.map((plugin) => (
@@ -181,10 +182,10 @@ function PluginCard({
 
 function PluginSummary({ plugin }: { plugin: PluginCatalogEntry }) {
   const components = [
-    plugin.components.skills ? "skills" : null,
-    plugin.components.mcp ? "mcp" : null,
-    plugin.oauth.required ? (plugin.oauth.connected ? "oauth connected" : "oauth") : null,
-    plugin.user.attached ? "attached" : null,
+    plugin.components.skills ? "Skill" : null,
+    plugin.components.mcp ? "MCP" : null,
+    plugin.oauth.required ? (plugin.oauth.connected ? "OAuth 已连接" : "OAuth") : null,
+    plugin.user.attached ? "已启用" : null,
   ]
     .filter(Boolean)
     .join(" · ");
@@ -193,8 +194,10 @@ function PluginSummary({ plugin }: { plugin: PluginCatalogEntry }) {
     <div>
       <h3 className="text-sm font-semibold">{plugin.name}</h3>
       <p className="mt-0.5 text-xs text-muted-foreground">
-        v{plugin.version} · {plugin.publisher} · {plugin.installMode.replaceAll("_", " ")}
-        {plugin.reviewStatus !== "approved" ? ` · ${plugin.reviewStatus}` : ""}
+        v{plugin.version} · {plugin.publisher} · {installModeLabel(plugin.installMode)}
+        {plugin.reviewStatus !== "approved"
+          ? ` · ${reviewStatusLabel(plugin.reviewStatus)}`
+          : ""}
       </p>
       {plugin.description && (
         <p className="mt-2 text-sm text-muted-foreground">{plugin.description}</p>
@@ -237,7 +240,7 @@ function PluginActions({
             })
           }
         >
-          {busy === `install-${plugin.name}` ? "Installing…" : "Install"}
+          {busy === `install-${plugin.name}` ? "安装中…" : "安装"}
         </button>
       )}
 
@@ -254,7 +257,7 @@ function PluginActions({
                 })
               }
             >
-              {plugin.user.attached ? "Disable" : "Enable"}
+              {plugin.user.attached ? "停用" : "启用"}
             </button>
           )}
           {plugin.oauth.required && plugin.oauth.connectPath && (
@@ -262,7 +265,7 @@ function PluginActions({
               href={api.connectPluginOAuthUrl(plugin.name)}
               className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium"
             >
-              {plugin.oauth.connected ? "Reconnect" : "Connect"}
+              {plugin.oauth.connected ? "重新连接" : "连接"}
             </a>
           )}
           {(plugin.components.mcp || hasVariables(plugin.variables)) && (
@@ -271,7 +274,7 @@ function PluginActions({
               className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium"
               onClick={onToggleConfigure}
             >
-              Configure
+              配置
             </button>
           )}
           {canManage && (
@@ -286,7 +289,7 @@ function PluginActions({
                 })
               }
             >
-              Uninstall
+              卸载
             </button>
           )}
         </>
@@ -307,9 +310,9 @@ function PluginActions({
               })
             }
           >
-            <option value="default_off">Default Off</option>
-            <option value="default_on">Default On</option>
-            <option value="required">Required</option>
+            <option value="default_off">默认关闭</option>
+            <option value="default_on">默认开启</option>
+            <option value="required">强制启用</option>
           </select>
           {plugin.reviewStatus === "approved" && (
             <button
@@ -322,7 +325,7 @@ function PluginActions({
                 })
               }
             >
-              Yank
+              下架
             </button>
           )}
         </>
@@ -351,22 +354,22 @@ function ConfigureForm({
   const properties = variableProperties(plugin.variables);
   const names = Object.keys(properties);
   if (names.length === 0) {
-    return <p className="mt-3 text-xs text-muted-foreground">No variables to configure.</p>;
+    return <p className="mt-3 text-xs text-muted-foreground">没有可配置的变量。</p>;
   }
 
   return (
     <div className="mt-4 space-y-3 border-t border-border pt-4">
       {plugin.oauth.required && plugin.oauth.connected && plugin.oauth.tokenVariable && (
         <p className="text-xs text-muted-foreground">
-          Connected via OAuth ({plugin.oauth.tokenVariable}). Paste below only to override with
-          an API key.
+          已通过 OAuth 连接（{plugin.oauth.tokenVariable}）。仅在需要改用 API Key
+          覆盖时才在下方粘贴。
         </p>
       )}
       {names.map((name) => (
         <label key={name} className="block text-xs">
           <span className="font-medium">{properties[name]?.title ?? name}</span>
           {plugin.user.configuredVariables.includes(name) && (
-            <span className="ml-2 text-muted-foreground">(saved)</span>
+            <span className="ml-2 text-muted-foreground">（已保存）</span>
           )}
           {properties[name]?.description && (
             <span className="mt-0.5 block text-muted-foreground">
@@ -389,10 +392,30 @@ function ConfigureForm({
         disabled={busy}
         onClick={onSave}
       >
-        {busy ? "Saving…" : "Save"}
+        {busy ? "保存中…" : "保存"}
       </button>
     </div>
   );
+}
+
+const INSTALL_MODE_LABELS: Record<string, string> = {
+  default_off: "默认关闭",
+  default_on: "默认开启",
+  required: "强制启用",
+};
+
+const REVIEW_STATUS_LABELS: Record<string, string> = {
+  approved: "已批准",
+  pending: "待审核",
+  yanked: "已下架",
+};
+
+function installModeLabel(mode: string): string {
+  return INSTALL_MODE_LABELS[mode] ?? mode.replaceAll("_", " ");
+}
+
+function reviewStatusLabel(status: string): string {
+  return REVIEW_STATUS_LABELS[status] ?? status;
 }
 
 function variableProperties(

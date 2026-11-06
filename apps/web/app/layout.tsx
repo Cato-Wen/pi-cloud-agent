@@ -8,7 +8,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "zen8agent",
-  description: "Start, steer, and inspect Pi agent sessions",
+  description: "启动、引导并查看 Pi agent 会话",
   icons: {
     icon: [{ url: "/assets/z8l-logo.png", type: "image/png" }],
     apple: "/assets/z8l-logo.png",
@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
-      lang="en"
+      lang="zh-CN"
       suppressHydrationWarning
       className={cn(GeistSans.variable, GeistMono.variable)}
     >

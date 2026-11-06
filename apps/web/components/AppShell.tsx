@@ -43,7 +43,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   if (state === "loading") {
     return (
       <div className="grid min-h-screen place-items-center text-sm text-muted-foreground">
-        Loading…
+        加载中…
       </div>
     );
   }
@@ -102,14 +102,14 @@ function NavRail() {
   const { toggle } = useNavCollapse();
   return (
     <div className="nav-rail relative">
-      <button type="button" onClick={toggle} aria-label="Expand sidebar" className="rail-link">
+      <button type="button" onClick={toggle} aria-label="展开侧边栏" className="rail-link">
         <PanelLeftIcon className="size-4" />
       </button>
-      <Link href="/chat" aria-label="New task" className="rail-link mt-1">
+      <Link href="/chat" aria-label="新建任务" className="rail-link mt-1">
         <PlusIcon className="size-4" />
       </Link>
       <div className="flex-1" />
-      <Link href="/reviews" aria-label="Reviews" className="rail-link">
+      <Link href="/reviews" aria-label="评审" className="rail-link">
         <GitPullRequestIcon className="size-4" />
       </Link>
       <AccountMenu compact placement="right" />

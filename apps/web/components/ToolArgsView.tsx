@@ -144,7 +144,7 @@ function CopyButton({ text }: { text: string }) {
       type="button"
       onClick={onCopy}
       className="rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-      aria-label={copied ? "Copied" : "Copy"}
+      aria-label={copied ? "已复制" : "复制"}
     >
       {copied ? <CheckIcon className="size-3.5" /> : <CopyIcon className="size-3.5" />}
     </button>

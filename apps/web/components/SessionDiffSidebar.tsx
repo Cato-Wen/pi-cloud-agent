@@ -63,7 +63,7 @@ export function SessionDiffSidebar({
   );
   const renderHeaderMetadata = useCallback((item: CodeViewItem) => {
     const turn = item.id.split(":", 1)[0]?.replace("turn-", "");
-    return <span className="text-[10px] opacity-60">turn {turn}</span>;
+    return <span className="text-[10px] opacity-60">第 {turn} 轮</span>;
   }, []);
 
   useEffect(() => {
@@ -113,37 +113,37 @@ export function SessionDiffSidebar({
 
   return (
     <aside
-      aria-label="Session code changes"
+      aria-label="会话代码改动"
       className="flex h-full min-h-0 w-full flex-col border-l border-border bg-background text-foreground"
     >
       <header className="flex h-12 shrink-0 items-center gap-3 border-b border-border px-4">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <h2 className="text-[13px] font-semibold tracking-tight">Changes</h2>
+            <h2 className="text-[13px] font-semibold tracking-tight">改动</h2>
             {hasActiveTurn ? (
               <span className="animate-pulse-dot rounded-full bg-blue-500 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-[0.12em] text-white">
-                Live
+                实时
               </span>
             ) : null}
           </div>
           <p className="mt-0.5 truncate text-[10px] text-muted-foreground">
             {items.length ? (
               <>
-                {stats.files} {stats.files === 1 ? "file" : "files"} ·{" "}
+                {stats.files} 个文件 ·{" "}
                 <span className="text-emerald-600 dark:text-emerald-400">+{stats.added}</span>{" "}
                 <span className="text-red-600 dark:text-red-400">-{stats.removed}</span>
               </>
             ) : hasActiveTurn ? (
-              "Collecting the turn's final workspace diff…"
+              "正在收集本轮最终的工作区改动…"
             ) : (
-              "No code changes in this session"
+              "本会话没有代码改动"
             )}
           </p>
         </div>
         <button
           type="button"
           onClick={onClose}
-          aria-label="Close changes"
+          aria-label="关闭改动"
           className="grid size-7 shrink-0 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
         >
           <XIcon className="size-4" />
@@ -151,8 +151,7 @@ export function SessionDiffSidebar({
       </header>
       {latestDiff?.truncated ? (
         <div className="border-b border-amber-500/20 bg-amber-500/10 px-4 py-2 text-[11px] text-amber-700 dark:text-amber-300">
-          Large changes are bounded for responsiveness. The displayed patch is a prefix of the
-          full diff.
+          改动过大，为保证响应速度已截断。当前显示的是完整 diff 的前缀。
         </div>
       ) : null}
       {items.length ? (
@@ -179,12 +178,10 @@ function EmptyDiffState({ active }: { active: boolean }) {
         <span className="font-mono text-sm">+−</span>
       </div>
       <p className="text-sm font-medium text-foreground/80">
-        {active ? "Changes will appear here" : "Nothing changed"}
+        {active ? "改动会显示在这里" : "没有改动"}
       </p>
       <p className="mt-1 max-w-xs text-xs leading-5 text-muted-foreground">
-        {active
-          ? "The sidebar updates when the agent finishes this turn."
-          : "This session did not leave a Git-tracked change."}
+        {active ? "agent 完成本轮后，侧栏会更新。" : "本会话没有产生 Git 跟踪的改动。"}
       </p>
     </div>
   );

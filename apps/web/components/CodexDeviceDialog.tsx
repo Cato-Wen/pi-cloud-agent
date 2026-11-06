@@ -93,13 +93,13 @@ export function CodexDeviceDialog({
     if (event.type === "auth") {
       if (event.event.type !== "device_code") return;
       if (!event.event.userCode || !event.event.verificationUri) {
-        setState({ phase: "error", message: "Codex did not return a device code." });
+        setState({ phase: "error", message: "Codex 未返回设备码。" });
         return;
       }
       if (!isTrustedVerificationUri(event.event.verificationUri)) {
         setState({
           phase: "error",
-          message: "Codex returned an unexpected authorization URL.",
+          message: "Codex 返回了意外的授权地址。",
         });
         return;
       }
@@ -114,7 +114,7 @@ export function CodexDeviceDialog({
       flowId.current = null;
       await onConnected();
       setState({ phase: "success" });
-      onNotice("Codex subscription connected.", "success");
+      onNotice("Codex 订阅已连接。", "success");
       return;
     }
     flowId.current = null;
@@ -162,7 +162,7 @@ export function CodexDeviceDialog({
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
       <button
         type="button"
-        aria-label="Close Codex connection dialog"
+        aria-label="关闭 Codex 连接对话框"
         className="absolute inset-0 bg-background/70 backdrop-blur-md"
         onClick={close}
       />
@@ -181,17 +181,17 @@ export function CodexDeviceDialog({
               </div>
               <div>
                 <h2 id="codex-device-title" className="text-base font-medium">
-                  Connect Codex
+                  连接 Codex
                 </h2>
                 <p id="codex-device-description" className="mt-1 text-sm text-muted-foreground">
-                  Authorize this cloud agent with a one-time device code.
+                  使用一次性设备码授权此云端 agent。
                 </p>
               </div>
             </div>
             <button
               type="button"
               onClick={close}
-              aria-label="Close"
+              aria-label="关闭"
               className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <XIcon className="size-4" />
@@ -225,15 +225,13 @@ function ReadyStep({ onStart }: { onStart: () => void }) {
   return (
     <div>
       <p className="text-sm leading-6 text-muted-foreground">
-        ChatGPT must allow device code authorization for Codex before this agent can connect. In
-        a managed workspace, an administrator may need to turn it on.
+        ChatGPT 需要先为 Codex 开启设备码授权，此 agent
+        才能连接。在受管理的工作区中，可能需要管理员开启。
       </p>
 
       <ol className="mt-5 space-y-3 text-sm">
-        <DialogStep number="1">
-          Open ChatGPT Security settings and enable device code authorization.
-        </DialogStep>
-        <DialogStep number="2">Return here and request a one-time code.</DialogStep>
+        <DialogStep number="1">打开 ChatGPT 安全设置，启用设备码授权。</DialogStep>
+        <DialogStep number="2">回到这里，获取一次性验证码。</DialogStep>
       </ol>
 
       <div className="mt-6 grid gap-2">
@@ -243,11 +241,11 @@ function ReadyStep({ onStart }: { onStart: () => void }) {
           nativeButton={false}
           render={<a href={SECURITY_SETTINGS_URL} target="_blank" rel="noreferrer" />}
         >
-          Open ChatGPT Security settings
+          打开 ChatGPT 安全设置
           <ExternalLinkIcon />
         </Button>
         <Button type="button" className="w-full" onClick={onStart} autoFocus>
-          I’ve enabled it — get a code
+          已启用，获取验证码
         </Button>
       </div>
     </div>
@@ -258,8 +256,8 @@ function StartingStep() {
   return (
     <div className="flex min-h-32 flex-col items-center justify-center text-center">
       <LoaderCircleIcon className="size-6 animate-spin text-muted-foreground" />
-      <p className="mt-3 text-sm font-medium">Requesting a device code…</p>
-      <p className="mt-1 text-xs text-muted-foreground">This usually takes a few seconds.</p>
+      <p className="mt-3 text-sm font-medium">正在请求设备码…</p>
+      <p className="mt-1 text-xs text-muted-foreground">通常只需几秒钟。</p>
     </div>
   );
 }
@@ -279,7 +277,7 @@ function AuthorizationStep({
     <div>
       <ol className="space-y-4 text-sm">
         <DialogStep number="1">
-          <p className="font-medium leading-5">Copy this one-time code</p>
+          <p className="font-medium leading-5">复制此一次性验证码</p>
           <button
             type="button"
             onClick={onCopy}
@@ -292,29 +290,28 @@ function AuthorizationStep({
               ) : (
                 <CopyIcon className="size-4" />
               )}
-              {copied ? "Copied" : "Copy"}
+              {copied ? "已复制" : "复制"}
             </span>
           </button>
         </DialogStep>
         <DialogStep number="2">
-          <p className="font-medium leading-5">Open Codex authorization</p>
+          <p className="font-medium leading-5">打开 Codex 授权页面</p>
           <p className="mt-1 text-xs leading-5 text-muted-foreground">
-            Sign in to ChatGPT if asked, then enter the code above. Keep this dialog open while
-            authorization finishes.
+            如有提示请登录 ChatGPT，然后输入上面的验证码。授权完成前请保持此对话框打开。
           </p>
           <Button
             className="mt-3 w-full"
             nativeButton={false}
             render={<a href={verificationUri} target="_blank" rel="noreferrer" />}
           >
-            Continue to ChatGPT
+            前往 ChatGPT
             <ExternalLinkIcon />
           </Button>
         </DialogStep>
       </ol>
       <div className="mt-5 flex items-center gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
         <LoaderCircleIcon className="size-3.5 animate-spin" />
-        Waiting for authorization…
+        等待授权…
       </div>
     </div>
   );
@@ -326,12 +323,12 @@ function SuccessStep({ onDone }: { onDone: () => void }) {
       <div className="flex size-12 items-center justify-center rounded-full bg-emerald-500/12 text-emerald-600 dark:text-emerald-400">
         <CheckCircle2Icon className="size-6" />
       </div>
-      <p className="mt-4 font-medium">Codex is connected</p>
+      <p className="mt-4 font-medium">Codex 已连接</p>
       <p className="mt-1 text-sm text-muted-foreground">
-        Your available Codex models are now ready for cloud tasks.
+        你可用的 Codex 模型现在可以用于云端任务了。
       </p>
       <Button type="button" className="mt-6 w-full" onClick={onDone} autoFocus>
-        Done
+        完成
       </Button>
     </div>
   );
@@ -344,7 +341,7 @@ function ErrorStep({ message, onRetry }: { message: string; onRetry: () => void 
         <div className="flex gap-3">
           <AlertCircleIcon className="mt-0.5 size-4 shrink-0 text-destructive" />
           <div>
-            <p className="text-sm font-medium">Couldn’t connect Codex</p>
+            <p className="text-sm font-medium">无法连接 Codex</p>
             <p role="alert" className="mt-1 text-xs leading-5 text-muted-foreground">
               {message}
             </p>
@@ -354,14 +351,14 @@ function ErrorStep({ message, onRetry }: { message: string; onRetry: () => void 
               rel="noreferrer"
               className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground underline decoration-border underline-offset-4 hover:text-foreground hover:decoration-foreground"
             >
-              Check device code authorization
+              检查设备码授权设置
               <ExternalLinkIcon className="size-3.5" />
             </a>
           </div>
         </div>
       </div>
       <Button type="button" className="mt-6 w-full" onClick={onRetry}>
-        Try again
+        重试
       </Button>
     </div>
   );

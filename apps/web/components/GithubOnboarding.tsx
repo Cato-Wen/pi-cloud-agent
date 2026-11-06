@@ -55,7 +55,7 @@ export function GithubOnboarding() {
 
   if (state.kind !== "needed" || dismissed || pathname !== "/chat") return null;
 
-  const requestMessage = `Hi, please assign me an agent on zen8agent. My GitHub login is ${state.login}.`;
+  const requestMessage = `你好，请在 zen8agent 上给我分配一个 agent，我的 GitHub 登录名是 ${state.login}。`;
 
   return (
     <section
@@ -65,16 +65,15 @@ export function GithubOnboarding() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h2 id="access-onboarding-title" className="text-base font-medium">
-            You&apos;re signed in, {state.login}.
+            {state.login}，你已登录。
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            You don&apos;t have access to any repository or agent yet. Pick the path that
-            matches your role.
+            你还没有任何仓库或 agent 的访问权限。请按你的角色选择下面一种方式。
           </p>
         </div>
         <button
           type="button"
-          aria-label="Dismiss for now"
+          aria-label="暂时关闭"
           className="rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
           onClick={() => {
             window.sessionStorage.setItem(DISMISSED_KEY, "1");
@@ -88,26 +87,26 @@ export function GithubOnboarding() {
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <div className="rounded-xl border border-border bg-card p-4">
           <h3 className="flex items-center gap-2 text-sm font-medium">
-            <KeyRoundIcon className="size-4" />I write code
+            <KeyRoundIcon className="size-4" />
+            我写代码
           </h3>
           <p className="mt-1.5 text-xs leading-5 text-muted-foreground">
-            Add a GitHub personal access token. Commits and pull requests will be authored as
-            you.
+            添加 GitHub 个人访问 token。提交和 PR 会以你的身份创建。
           </p>
           <Link
             href="/settings"
             className="mt-3 inline-flex h-8 items-center gap-1.5 rounded-lg bg-primary px-2.5 text-sm font-medium text-primary-foreground transition-colors outline-none hover:bg-primary/80 focus-visible:ring-3 focus-visible:ring-ring/50"
           >
-            Add token in Settings
+            去设置里添加 token
           </Link>
         </div>
         <div className="rounded-xl border border-border bg-card p-4">
           <h3 className="flex items-center gap-2 text-sm font-medium">
             <UsersIcon className="size-4" />
-            I&apos;m product or QA
+            我是产品 / 测试
           </h3>
           <p className="mt-1.5 text-xs leading-5 text-muted-foreground">
-            An operator assigns you a team agent that already knows which repositories to use.
+            由管理员给你分配一个团队 agent，它已经知道该使用哪些仓库。
           </p>
           <Button
             type="button"
@@ -122,7 +121,7 @@ export function GithubOnboarding() {
             }
           >
             <ClipboardCopyIcon className="size-3.5" />
-            {copied ? "Copied" : "Copy request message"}
+            {copied ? "已复制" : "复制申请文案"}
           </Button>
         </div>
       </div>

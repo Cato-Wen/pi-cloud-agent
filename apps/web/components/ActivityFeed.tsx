@@ -50,7 +50,7 @@ export function ActivityFeed({
       {active && lastActivityIndex >= 0 && blocks[lastActivityIndex]?.kind !== "work" && (
         <div className="flex items-center gap-2 text-[13px] text-muted-foreground">
           <LoaderCircleIcon className="size-3.5 animate-spin" />
-          Working…
+          工作中…
         </div>
       )}
     </div>
@@ -87,7 +87,7 @@ function BlockView({
       <details className="activity-line group" open={streaming}>
         <summary className="flex cursor-pointer list-none select-none items-center gap-1.5 py-1 text-[13px] text-muted-foreground transition-colors hover:text-foreground">
           <ChevronRightIcon className="size-3.5 shrink-0 transition-transform group-open:rotate-90" />
-          Thought
+          思考
         </summary>
         <p className="ml-[7px] mt-1 whitespace-pre-wrap border-l border-border/70 pl-3.5 text-[13px] leading-5 text-muted-foreground italic">
           {block.text}
@@ -124,7 +124,7 @@ function WorkGroup({ block, streaming }: { block: WorkBlock; streaming: boolean 
       <div>
         <div className="flex items-center gap-2 py-1 text-[13px] text-muted-foreground">
           <LoaderCircleIcon className="size-3.5 animate-spin" />
-          Working…
+          工作中…
         </div>
         <WorkLines items={block.items} />
       </div>
@@ -134,7 +134,7 @@ function WorkGroup({ block, streaming }: { block: WorkBlock; streaming: boolean 
     <details className="activity-line group">
       <summary className="flex cursor-pointer list-none select-none items-center gap-1.5 py-1 text-[13px] text-muted-foreground transition-colors hover:text-foreground">
         <ChevronRightIcon className="size-3.5 shrink-0 transition-transform group-open:rotate-90" />
-        Worked for {workDuration(block.startedAt, block.endedAt)}
+        工作了 {workDuration(block.startedAt, block.endedAt)}
       </summary>
       <WorkLines items={block.items} />
     </details>
@@ -254,18 +254,18 @@ function workDuration(startIso: string, endIso: string): string {
   const totalSeconds = Math.max(1, Math.round(ms / 1000));
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
-  return minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
+  return minutes > 0 ? `${minutes} 分 ${seconds} 秒` : `${seconds} 秒`;
 }
 
 const TOOL_VERBS: Record<string, string> = {
-  read: "Read",
-  edit: "Edited",
-  write: "Wrote",
-  bash: "Ran",
-  shell: "Ran",
-  grep: "Searched",
-  glob: "Found files",
-  list: "Listed",
+  read: "读取",
+  edit: "编辑",
+  write: "写入",
+  bash: "运行",
+  shell: "运行",
+  grep: "搜索",
+  glob: "查找文件",
+  list: "列出",
 };
 
 function toolVerb(tool: string): string {
@@ -283,7 +283,7 @@ function toolSummary(tool: string, args: Record<string, unknown>): string {
     case "shell":
       return values.command || values.cmd || "";
     case "grep":
-      return values.pattern ? `for “${values.pattern}”` : "";
+      return values.pattern ? `“${values.pattern}”` : "";
     case "glob":
       return values.pattern || "";
     case "list":
@@ -298,7 +298,7 @@ function toolSummary(tool: string, args: Record<string, unknown>): string {
 function Empty({ active }: { active: boolean }) {
   return (
     <div className="grid min-h-72 place-items-center text-sm text-muted-foreground">
-      {active ? "Waiting for Pi’s first event…" : "No activity was recorded."}
+      {active ? "等待 Pi 的第一个事件…" : "没有记录到任何活动。"}
     </div>
   );
 }

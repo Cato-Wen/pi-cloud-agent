@@ -47,8 +47,8 @@ function SettingsContent() {
   const callbackMessage = searchParams.get("message");
   const callbackNotice = result
     ? result === "connected"
-      ? "Connection saved."
-      : callbackMessage || `Connection ${result.replaceAll("_", " ")}.`
+      ? "连接已保存。"
+      : callbackMessage || `连接失败：${result.replaceAll("_", " ")}。`
     : null;
   const noticeMessage = error ?? actionNotice?.message ?? callbackNotice;
   const noticeKind = error
@@ -87,7 +87,7 @@ function SettingsContent() {
       .then(async () => {
         if (!active) return;
         setConnections(await api.listConnections());
-        notify("GitHub App installation connected.", "success");
+        notify("GitHub App 安装已连接。", "success");
         setInstallationVersion((value) => value + 1);
         invalidateRepositoryCache();
         window.dispatchEvent(new Event(GITHUB_INSTALLATION_CHANGED));
@@ -108,7 +108,7 @@ function SettingsContent() {
     try {
       await api.deleteConnection(provider);
       setConnections(await api.listConnections());
-      notify("Connection disconnected.", "success");
+      notify("连接已断开。", "success");
     } catch (cause) {
       notify(cause instanceof Error ? cause.message : String(cause), "error");
     } finally {
@@ -124,7 +124,7 @@ function SettingsContent() {
   return (
     <div data-testid="settings-scroll" className="h-full overflow-y-auto bg-background">
       <header className="sticky top-0 z-10 flex h-12 items-center border-b border-border bg-background px-5">
-        <h1 className="text-[13px] font-medium">Settings</h1>
+        <h1 className="text-[13px] font-medium">设置</h1>
       </header>
       <main className="mx-auto max-w-4xl px-5 py-8 sm:px-8">
         <SettingsTabs repositoriesTab={repositoriesTab} />
@@ -133,11 +133,10 @@ function SettingsContent() {
         ) : (
           <>
             <div className="mb-8">
-              <h2 className="text-xl font-medium tracking-[-0.02em]">GitHub account</h2>
+              <h2 className="text-xl font-medium tracking-[-0.02em]">GitHub 账号</h2>
               <p className="mt-2 text-sm text-muted-foreground">
-                Your signed-in identity. Add a personal access token to develop with your own
-                identity; repositories reached through the GitHub App are listed in the
-                Repositories tab.
+                你的登录身份。添加个人访问 token 后，任务可以用你自己的身份开发；通过 GitHub App
+                接入的仓库列在「仓库」标签页。
               </p>
             </div>
 
@@ -154,9 +153,9 @@ function SettingsContent() {
             </div>
 
             <div className="mb-8 mt-12">
-              <h2 className="text-xl font-medium tracking-[-0.02em]">Models</h2>
+              <h2 className="text-xl font-medium tracking-[-0.02em]">模型</h2>
               <p className="mt-2 text-sm text-muted-foreground">
-                Choose your default model and manage provider connections.
+                选择默认模型，并管理提供方连接。
               </p>
             </div>
 
@@ -204,7 +203,7 @@ function ConnectionNotice({
         <p className="min-w-0 flex-1 break-words">{message}</p>
         <button
           type="button"
-          aria-label="Close notification"
+          aria-label="关闭通知"
           onClick={onClose}
           className="shrink-0 rounded-md p-0.5 opacity-70 transition-opacity hover:opacity-100"
         >
@@ -245,10 +244,10 @@ function ConnectionCard({
           />
           <span className="truncate">
             {connection.connected
-              ? `Connected${connection.accountName ? ` as ${connection.accountName}` : ""}`
+              ? `已连接${connection.accountName ? `：${connection.accountName}` : ""}`
               : connection.configured
-                ? "Not connected"
-                : "OAuth client not configured"}
+                ? "未连接"
+                : "未配置 OAuth 客户端"}
           </span>
         </p>
       </div>
@@ -261,7 +260,7 @@ function ConnectionCard({
           size="sm"
         >
           <UnplugIcon className="size-3.5" />
-          Disconnect
+          断开
         </Button>
       ) : (
         <a
@@ -270,15 +269,15 @@ function ConnectionCard({
           className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs text-primary-foreground transition-opacity hover:opacity-90 aria-disabled:pointer-events-none aria-disabled:opacity-40"
         >
           <ExternalLinkIcon className="size-3.5" />
-          Connect
+          连接
         </a>
       )}
       <ConfirmDialog
         open={confirming}
-        title={`Disconnect ${connection.displayName}?`}
-        description="Tasks will lose repository access through this identity until you connect again."
-        confirmLabel="Disconnect"
-        busyLabel="Disconnecting…"
+        title={`断开 ${connection.displayName}？`}
+        description="在重新连接之前，任务将无法通过此身份访问仓库。"
+        confirmLabel="断开"
+        busyLabel="断开中…"
         busy={busy}
         onCancel={() => setConfirming(false)}
         onConfirm={() => void onDisconnect().finally(() => setConfirming(false))}
@@ -289,20 +288,20 @@ function ConnectionCard({
 
 function SettingsTabs({ repositoriesTab }: { repositoriesTab: boolean }) {
   return (
-    <nav aria-label="Settings" className="mb-8 flex gap-6 border-b border-border text-sm">
+    <nav aria-label="设置" className="mb-8 flex gap-6 border-b border-border text-sm">
       <Link
         href="/settings"
         aria-current={!repositoriesTab ? "page" : undefined}
         className={`pb-3 ${!repositoriesTab ? "border-b-2 border-foreground font-medium" : "text-muted-foreground"}`}
       >
-        General
+        账号
       </Link>
       <Link
         href="/settings?tab=repositories"
         aria-current={repositoriesTab ? "page" : undefined}
         className={`pb-3 ${repositoriesTab ? "border-b-2 border-foreground font-medium" : "text-muted-foreground"}`}
       >
-        Repositories
+        仓库
       </Link>
     </nav>
   );
