@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { testLlmEndpoint } from "./connections";
+import { testLlmEndpoint, thinkingLevelsFor } from "./connections";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -139,5 +139,25 @@ describe("testLlmEndpoint", () => {
         { resolveHostname: publicLookup },
       ),
     ).rejects.toThrow("model endpoint returned 302");
+  });
+});
+
+describe("thinking levels offered per connection", () => {
+  it("lets API-key Anthropic connections choose a thinking level", () => {
+    expect(
+      thinkingLevelsFor({ authType: "api_key", api: "anthropic-messages" }, undefined),
+    ).toEqual(["off", "low", "medium", "high"]);
+  });
+
+  it("keeps other API-key connections at off, since their reasoning controls are unknown", () => {
+    expect(
+      thinkingLevelsFor({ authType: "api_key", api: "openai-completions" }, undefined),
+    ).toEqual(["off"]);
+  });
+
+  it("uses the catalog's levels for OAuth connections", () => {
+    expect(
+      thinkingLevelsFor({ authType: "oauth", api: "openai-codex-responses" }, ["low", "high"]),
+    ).toEqual(["low", "high"]);
   });
 });

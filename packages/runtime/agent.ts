@@ -14,6 +14,7 @@ import { AGENT_DEBUG_EVENT, SANDBOX_ENV } from "@pi-cloud-agent/protocol";
 import type { RuntimeConfig } from "./config";
 import { createGithubCommentTool } from "./github-comment";
 import { createGithubReviewTool } from "./github-review";
+import { describeModel } from "./model-descriptor";
 import { persistRefreshedOAuthCredential } from "./oauth-credential";
 import type { Reporter } from "./reporter";
 import { loadSessionManager, saveSessionCheckpoint } from "./session-state";
@@ -54,26 +55,7 @@ export async function runAgentSession(
         // through another layer.
         apiKey: `$${SANDBOX_ENV.modelApiKey}`,
         api: config.model.api,
-        models: [
-          {
-            id: config.model.name,
-            name: config.model.name,
-            reasoning: true,
-            // "off" sends no thinking parameter at all. Newer Claude models
-            // reject `thinking: { type: "disabled" }` outright, and omitting
-            // the field is the provider-default on every model.
-            thinkingLevelMap: { off: null },
-            input: ["text"],
-            cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-            contextWindow: config.model.contextWindow,
-            maxTokens: config.model.maxTokens,
-            compat: {
-              supportsDeveloperRole: false,
-              supportsReasoningEffort: false,
-              maxTokensField: "max_tokens",
-            },
-          },
-        ],
+        models: [describeModel(config.model)],
       });
     }
 

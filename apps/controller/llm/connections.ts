@@ -284,8 +284,23 @@ function decryptModel(
     maxTokens: selected.maxTokens,
     apiKey: credential.type === "api_key" ? credential.key : credential.access,
     authJson: credential.type === "oauth" ? JSON.stringify(credential) : null,
-    thinkingLevels: row.authType === "api_key" ? ["off"] : (selected.thinkingLevels ?? ["off"]),
+    thinkingLevels: thinkingLevelsFor(row, selected.thinkingLevels),
   };
+}
+
+/**
+ * Which thinking levels a model may be run at. OAuth catalogs declare their
+ * own. For API-key connections only the Anthropic Messages API has a known
+ * thinking control (pi-ai maps levels to budget or effort); other endpoints
+ * stay at "off" rather than guessing a reasoning parameter they may reject.
+ */
+export function thinkingLevelsFor(
+  row: Pick<LlmConnectionRow, "authType" | "api">,
+  declared: ThinkingLevel[] | undefined,
+): ThinkingLevel[] {
+  if (row.authType !== "api_key") return declared ?? ["off"];
+  if (row.api === "anthropic-messages") return ["off", "low", "medium", "high"];
+  return ["off"];
 }
 
 function parseCredential(value: string): StoredCredential {
@@ -327,7 +342,7 @@ export function toSummary(row: LlmConnectionRow): LlmConnectionSummary {
     model: row.model,
     models: row.models.map((model) => ({
       ...model,
-      thinkingLevels: row.authType === "api_key" ? ["off"] : (model.thinkingLevels ?? ["off"]),
+      thinkingLevels: thinkingLevelsFor(row, model.thinkingLevels),
     })),
     contextWindow: row.contextWindow,
     maxTokens: row.maxTokens,
