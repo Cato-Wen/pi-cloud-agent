@@ -1,7 +1,15 @@
-import { SANDBOX_ENV, Secret } from "@pi-cloud-agent/protocol";
+import {
+  planWorkspace,
+  type RepoRef,
+  SANDBOX_ENV,
+  type SandboxWorkspaceRepo,
+  Secret,
+  type WorkspaceRepo,
+} from "@pi-cloud-agent/protocol";
 import type { Config } from "../config";
 import { getAppUserById } from "../db/auth";
 import type { Database } from "../db/client";
+import type { AppUserRow } from "../db/schema";
 import {
   modelIdFromSnapshot,
   type ResolvedLlmModel,
@@ -39,6 +47,10 @@ interface MintInput {
   userId: string | null;
   provider: string;
   repoFullName: string;
+  /** The primary repository as the trigger recorded it; the workspace plan is laid out from it. */
+  repo: RepoRef;
+  /** Read-only repositories cloned next to the primary one; each gets its own token. */
+  contextRepos: WorkspaceRepo[];
   modelConnectionId: string | null;
   modelSnapshot: string;
 }
@@ -49,6 +61,8 @@ interface RunCredentials {
   /** Non-secret companions to those credentials (usernames, hosts). */
   env: Record<string, string>;
   model: ResolvedLlmModel;
+  /** The sandbox layout, token variable names included but never token values. */
+  workspace: SandboxWorkspaceRepo[];
 }
 
 interface BrokerDeps {
@@ -108,11 +122,16 @@ export function createCredentialBroker(
       userId,
       provider,
       repoFullName,
+      repo,
+      contextRepos,
       modelConnectionId,
       modelSnapshot,
     }): Promise<RunCredentials> {
       if (!userId) throw new Error("authentication is required to run a task");
       if (!modelConnectionId) throw new Error("run has no model connection");
+      if (contextRepos.length > 0 && provider !== "github") {
+        throw new Error("Context repositories are only supported for GitHub tasks.");
+      }
       const model = await resolveLlmModelForRun(
         database,
         config,
@@ -120,39 +139,54 @@ export function createCredentialBroker(
         modelConnectionId,
         modelIdFromSnapshot(modelSnapshot),
       );
-      const secrets: Record<string, Secret> = {
-        [SANDBOX_ENV.modelApiKey]: new Secret(model.apiKey, "model api key"),
-      };
-      if (model.authJson) {
-        secrets[SANDBOX_ENV.modelAuthJson] = new Secret(
-          model.authJson,
-          "model OAuth credential",
-        );
-      }
+      const secrets = modelSecrets(model);
       const env: Record<string, string> = {};
 
-      // Public repositories remain usable when no identity is connected. A
-      // credential failure is reported by the agent only if the run needs it.
       const repository = await this.mintForRepository({ userId, provider, repoFullName });
-      if (
-        provider === "github" &&
-        config.auth.requireUser &&
-        !repository.secrets[SANDBOX_ENV.scmToken]
-      ) {
-        throw new Error(repository.problem ?? "could not mint a GitHub credential for the run");
-      }
+      assertPrimaryCredential(config, provider, repository);
       Object.assign(secrets, repository.secrets);
       Object.assign(env, repository.env);
 
+      const workspace = planWorkspace(repo, contextRepos);
       if (provider === "github") {
         const user = await getAppUserById(database, userId);
-        if (user) Object.assign(env, gitAuthorEnv(user));
+        if (!user) throw new Error("run user no longer exists");
+        Object.assign(env, gitAuthorEnv(user));
+        Object.assign(
+          secrets,
+          await mintContextTokens(config, database, user, workspace, fetchImpl),
+        );
       }
 
       env[SANDBOX_ENV.modelAuthType] = model.authType;
-      return { secrets, env, model };
+      return { secrets, env, model, workspace };
     },
   };
+}
+
+/**
+ * Public repositories remain usable when no identity is connected. A
+ * credential failure is reported by the agent only if the run needs it —
+ * except on GitHub with sign-in required, where the primary must be writable.
+ */
+function assertPrimaryCredential(
+  config: Config,
+  provider: string,
+  repository: RepositoryCredentials,
+): void {
+  if (provider !== "github" || !config.auth.requireUser) return;
+  if (repository.secrets[SANDBOX_ENV.scmToken]) return;
+  throw new Error(repository.problem ?? "could not mint a GitHub credential for the run");
+}
+
+function modelSecrets(model: ResolvedLlmModel): Record<string, Secret> {
+  const secrets: Record<string, Secret> = {
+    [SANDBOX_ENV.modelApiKey]: new Secret(model.apiKey, "model api key"),
+  };
+  if (model.authJson) {
+    secrets[SANDBOX_ENV.modelAuthJson] = new Secret(model.authJson, "model OAuth credential");
+  }
+  return secrets;
 }
 
 /**
@@ -174,4 +208,36 @@ async function mintGithubRepositoryToken(
   });
   if (access.mode === "none") throw new Error(access.reason);
   return access.token;
+}
+
+/**
+ * Context repositories are read-only, so any credential that can read them
+ * will do. The first one nobody can read fails provisioning: a workspace
+ * missing a repository the user asked for is worse than no run.
+ */
+async function mintContextTokens(
+  config: Config,
+  database: Database,
+  user: AppUserRow,
+  workspace: SandboxWorkspaceRepo[],
+  fetchImpl: typeof fetch,
+): Promise<Record<string, Secret>> {
+  const secrets: Record<string, Secret> = {};
+  for (const repo of workspace.filter((entry) => entry.role === "context")) {
+    const access = await resolveRepositoryAccess(
+      database,
+      config,
+      user,
+      repo.fullName,
+      "read",
+      {
+        fetchImpl,
+      },
+    );
+    if (access.mode === "none") {
+      throw new Error(`Context repository ${repo.fullName}: ${access.reason}`);
+    }
+    secrets[repo.tokenVar] = access.token;
+  }
+  return secrets;
 }

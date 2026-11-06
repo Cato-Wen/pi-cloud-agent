@@ -466,6 +466,8 @@ describe("model connections", () => {
       userId: user.id,
       provider: "github",
       repoFullName: "acme/widgets",
+      repo: manualTrigger().repo,
+      contextRepos: [],
       modelConnectionId: original.id,
       modelSnapshot: "original-provider/original-model",
     });

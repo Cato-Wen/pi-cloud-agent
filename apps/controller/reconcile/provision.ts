@@ -1,9 +1,11 @@
 import {
+  describeWorkspace,
   SANDBOX_ENV,
   SANDBOX_PATHS,
   SandboxError,
   type SandboxProvider,
   type SandboxRef,
+  type SandboxWorkspaceRepo,
   Secret,
   type TaskSpec,
   WorkspaceNotFoundError,
@@ -72,6 +74,8 @@ export async function provisionRun(run: RunRow, deps: ProvisionDeps): Promise<vo
       userId: run.userId,
       provider: run.provider,
       repoFullName: run.repoFullName,
+      repo: run.trigger.repo,
+      contextRepos: run.trigger.contextRepos,
       modelConnectionId: run.modelConnectionId,
       modelSnapshot: run.model,
     });
@@ -92,6 +96,7 @@ export async function provisionRun(run: RunRow, deps: ProvisionDeps): Promise<vo
         resolved.skillText,
         credentials.model,
         resume.sessionBaseSha,
+        credentials.workspace,
       ),
       ...credentials.env,
     };
@@ -339,8 +344,10 @@ function buildEnv(
   skillText: string | undefined,
   model: import("../llm/connections").ResolvedLlmModel,
   sessionBaseSha: string | null,
+  workspace: SandboxWorkspaceRepo[],
 ): Record<string, string> {
   const { repo } = task;
+  const hasContext = workspace.some((entry) => entry.role === "context");
   const githubReview =
     run.trigger.intent === "github_review" && repo.prNumber && repo.headSha
       ? JSON.stringify({
@@ -375,7 +382,13 @@ function buildEnv(
     [SANDBOX_ENV.workspaceResumed]: String(workspaceResumed),
     [SANDBOX_ENV.debugEvents]: String(config.observability.exportDebugEvents),
 
-    [SANDBOX_ENV.taskPrompt]: buildTaskPrompt(skillText, task.prompt, run.turnNumber),
+    [SANDBOX_ENV.taskPrompt]: buildTaskPrompt(
+      skillText,
+      task.prompt,
+      run.turnNumber,
+      describeWorkspace(workspace),
+    ),
+    [SANDBOX_ENV.workspaceRepos]: hasContext ? JSON.stringify(workspace) : "",
 
     [SANDBOX_ENV.model]: `${model.provider}/${model.name}`,
     [SANDBOX_ENV.modelApi]: model.api,

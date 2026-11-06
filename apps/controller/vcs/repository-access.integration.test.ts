@@ -1,4 +1,4 @@
-import type { ReposResponse, SessionSummary } from "@pi-cloud-agent/protocol";
+import type { ReposResponse, SessionSummary, WorkspaceRepo } from "@pi-cloud-agent/protocol";
 import { beforeEach, expect, it } from "vitest";
 import { getAppUserById } from "../db/auth";
 import type { Database } from "../db/client";
@@ -82,13 +82,51 @@ async function user(): Promise<AppUserRow> {
 const resolve = async (need: AccessNeed, fetchImpl: typeof fetch) =>
   resolveRepositoryAccess(database, config, await user(), REPO, need, { fetchImpl });
 
-const mintRun = (spec: Spec, provider = "github", repoFullName = REPO) =>
+const KB = "ct-kb/team-cookbook-kb";
+const kbContext: WorkspaceRepo = {
+  provider: "github",
+  fullName: KB,
+  access: "read",
+  role: "context",
+  ref: {
+    provider: "github",
+    host: "github.com",
+    owner: "ct-kb",
+    name: "team-cookbook-kb",
+    cloneUrl: `https://github.com/${KB}.git`,
+    defaultBranch: "main",
+    baseSha: "",
+    headSha: "",
+    headBranch: "",
+    prNumber: null,
+  },
+};
+
+const mintRun = (
+  spec: Spec,
+  provider = "github",
+  repoFullName = REPO,
+  contextRepos: WorkspaceRepo[] = [],
+) =>
   createCredentialBroker(config, database, silentLogger(), {
     fetchImpl: fakeGithubFetch(spec),
   }).mintForRun({
     userId,
     provider,
     repoFullName,
+    repo: {
+      provider,
+      host: provider === "github" ? "github.com" : "dev.azure.com",
+      owner: repoFullName.split("/")[0] ?? "",
+      name: repoFullName.split("/").slice(1).join("/"),
+      cloneUrl: `https://github.com/${repoFullName}.git`,
+      defaultBranch: "main",
+      baseSha: "",
+      headSha: "",
+      headBranch: "",
+      prNumber: null,
+    },
+    contextRepos,
     modelConnectionId,
     modelSnapshot: "test-provider/test-model",
   });
@@ -221,6 +259,29 @@ it("does not substitute a read-only platform credential when the personal token 
   // The developer's token is still valid but lost push rights on this repository.
   const demoted = { ...github, [PAT]: { ...github[PAT], push: { [REPO]: 403 } } } as Spec;
   await expect(mintRun(demoted)).rejects.toThrow(/write/);
+});
+
+it("mints one credential per context repository and hands the sandbox the workspace plan", async () => {
+  await bindPat();
+  const minted = await mintRun(github, "github", REPO, [kbContext]);
+  expect(minted.secrets.SCM_TOKEN?.expose()).toBe(PAT);
+  expect(minted.secrets.SCM_TOKEN_1?.expose()).toBe(PAT);
+  expect(minted.workspace[1]).toMatchObject({
+    fullName: KB,
+    path: "/workspace/team-cookbook-kb",
+    access: "read",
+    role: "context",
+    tokenVar: "SCM_TOKEN_1",
+  });
+  expect(JSON.stringify(minted.workspace)).not.toContain(PAT);
+});
+
+it("fails provisioning when a context repository has lost its credential", async () => {
+  await bindPat();
+  const lost = { ...github, [PAT]: { ...github[PAT], read: { [KB]: 401 } } } as Spec;
+  await expect(mintRun(lost, "github", REPO, [kbContext])).rejects.toThrow(
+    /Context repository ct-kb\/team-cookbook-kb/,
+  );
 });
 
 it("does not inject a GitHub author into Azure DevOps runs", async () => {

@@ -67,13 +67,20 @@ export async function resolvePluginsForRun(
   };
 }
 
+/**
+ * Skills are introduced once, on the first turn. The workspace description is
+ * repeated on every turn: a resumed session's agent has no memory of the
+ * layout, and the repositories it may push to must never be a guess.
+ */
 export function buildTaskPrompt(
   skillText: string | undefined,
   prompt: string,
   turnNumber: number | null,
+  workspaceText = "",
 ): string {
-  if (turnNumber && turnNumber > 1) return prompt;
-  return composePrompt(skillText, prompt);
+  const body = composePrompt(workspaceText || undefined, prompt);
+  if (turnNumber && turnNumber > 1) return body;
+  return composePrompt(skillText, body);
 }
 
 async function resolveMcp(

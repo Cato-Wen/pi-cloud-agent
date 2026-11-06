@@ -6,6 +6,7 @@ import { listLlmConnections, setDefaultLlmConnection } from "../db/llm-connectio
 import { runs } from "../db/schema";
 import { createCredentialBroker } from "../secrets/broker";
 import {
+  manualTrigger,
   resetTables,
   seedRun,
   setupTestDatabase,
@@ -99,6 +100,8 @@ describe("model connection revisions", () => {
       userId: user.id,
       provider: "github",
       repoFullName: "acme/widgets",
+      repo: manualTrigger().repo,
+      contextRepos: [],
       modelConnectionId: first.id,
       modelSnapshot: "subscription-provider/old-model",
     });

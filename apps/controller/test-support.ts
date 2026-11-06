@@ -221,6 +221,7 @@ export const testCredentialBroker: CredentialBroker = {
       },
       secrets: {},
       env: {},
+      workspace: [],
     };
   },
 };
