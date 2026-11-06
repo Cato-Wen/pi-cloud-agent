@@ -2,6 +2,7 @@ import {
   type CreateRunBody,
   createRunRequestSchema,
   type RepoRef,
+  type WorkspaceRepo,
 } from "@pi-cloud-agent/protocol";
 import type { Context } from "hono";
 import type { Config } from "../config";
@@ -13,6 +14,8 @@ import type { AppEnv } from "./deps";
 
 interface ManualRequest {
   repo: RepoRef;
+  /** Read-only repositories resolved against the user's credentials; never contains `repo`. */
+  contextRepos: WorkspaceRepo[];
 }
 
 type ManualRequestResult =
@@ -81,7 +84,62 @@ async function resolveManualRequest(
     headBranch: branch,
     prNumber: null,
   };
-  return { repo };
+  const contextRepos = await resolveContextRepos(body, repo, config, database, user, fetchImpl);
+  return { repo, contextRepos };
+}
+
+/**
+ * Each context repository needs a credential that can read it; the first one
+ * nobody can read fails the whole request so the user hears which it was.
+ */
+async function resolveContextRepos(
+  body: CreateRunBody,
+  primary: RepoRef,
+  config: Config,
+  database: Database,
+  user: AppUserRow | null,
+  fetchImpl: typeof fetch,
+): Promise<WorkspaceRepo[]> {
+  const primaryName = `${primary.owner}/${primary.name}`.toLowerCase();
+  const wanted = [...new Set(body.contextRepos.map((name) => name.trim()))].filter(
+    (name) => name && name.toLowerCase() !== primaryName,
+  );
+  if (wanted.length === 0) return [];
+  if (body.provider !== "github") {
+    throw new Error("Context repositories are only supported for GitHub tasks.");
+  }
+  if (!user) throw new Error("authentication is required to run a task");
+  const resolved: WorkspaceRepo[] = [];
+  for (const fullName of wanted) {
+    const access = await resolveRepositoryAccess(database, config, user, fullName, "read", {
+      fetchImpl,
+    });
+    if (access.mode === "none")
+      throw new Error(`Context repository ${fullName}: ${access.reason}`);
+    const repository = await vcsProviderForAccess(access, { fetchImpl }).getRepository(
+      fullName,
+    );
+    if (!repository) throw new Error(`Context repository ${fullName}: not found on GitHub.`);
+    resolved.push({
+      provider: repository.provider,
+      fullName: repository.fullName,
+      access: "read",
+      role: "context",
+      ref: {
+        provider: repository.provider,
+        host: repository.host,
+        owner: repository.owner,
+        name: repository.name,
+        cloneUrl: repository.cloneUrl,
+        defaultBranch: repository.defaultBranch || "main",
+        baseSha: "",
+        headSha: "",
+        headBranch: "",
+        prNumber: null,
+      },
+    });
+  }
+  return resolved;
 }
 
 /**

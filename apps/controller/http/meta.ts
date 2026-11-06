@@ -6,6 +6,7 @@ import type { Database } from "../db/client";
 import type { AppUserRow } from "../db/schema";
 import { getVcsProvider } from "../vcs/connections";
 import {
+  listReadableRepositories,
   listWritableRepositories,
   resolveRepositoryAccess,
   vcsProviderForAccess,
@@ -19,6 +20,24 @@ export function metaRoutes(): Hono<AppEnv> {
     return c.json(
       await resolveRepos(c.get("database"), c.get("config"), c.get("user"), c.get("fetchImpl")),
     );
+  });
+
+  /** Read-only repositories a task may clone next to `primary`. */
+  app.get("/repos/context", async (c) => {
+    const user = c.get("user");
+    const config = c.get("config");
+    const primary = (c.req.query("primary") ?? "").toLowerCase();
+    if (!user || !accessGoverned(config, "github")) {
+      return c.json({ repos: [], source: "none" } satisfies ReposResponse);
+    }
+    const readable = await listReadableRepositories(c.get("database"), config, user, {
+      fetchImpl: c.get("fetchImpl"),
+    });
+    const repos = readable.filter((repo) => repo.fullName.toLowerCase() !== primary);
+    return c.json({
+      repos,
+      source: repos.length > 0 ? "connection" : "none",
+    } satisfies ReposResponse);
   });
 
   app.get("/repos/branches", async (c) => {

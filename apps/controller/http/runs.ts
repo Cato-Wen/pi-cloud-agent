@@ -44,7 +44,7 @@ export function runRoutes(): Hono<AppEnv> {
       queued = await queueSessionCommand(c.get("database"), config, {
         userId: user.id,
         repo: manual.repo,
-        contextRepos: [],
+        contextRepos: manual.contextRepos,
         prompt: body.prompt,
         mode: "standalone_run",
         intent: "general",

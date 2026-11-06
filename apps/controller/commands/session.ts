@@ -117,6 +117,7 @@ function sessionInput(
     provider: command.repo.provider,
     repoFullName: fullName(command),
     repo: command.repo,
+    workspaceRepos: command.contextRepos,
     trigger,
     model: `${model.provider}/${model.name}`,
     modelConnectionId: model.connectionId,

@@ -10,7 +10,10 @@ import {
 } from "@pi-cloud-agent/vcs";
 import type { Config } from "../config";
 import type { Database } from "../db/client";
-import { findPlatformCredentialsForRepo } from "../db/platform-credentials";
+import {
+  findPlatformCredentialsForRepo,
+  listPlatformCredentials,
+} from "../db/platform-credentials";
 import type { AppUserRow, PlatformVcsCredentialRow } from "../db/schema";
 import { getVcsAccessToken } from "./connections";
 import { getPersonalToken } from "./personal-token";
@@ -79,21 +82,64 @@ export async function listWritableRepositories(
   deps: Deps,
 ): Promise<Array<VcsRepository & { access: "write" }>> {
   const repos = new Map<string, VcsRepository & { access: "write" }>();
+  for (const repository of await ownTokenRepositories(database, config, user, deps)) {
+    if (repository.canPush && !repos.has(repository.fullName)) {
+      repos.set(repository.fullName, { ...toVcsRepository(repository), access: "write" });
+    }
+  }
+  return sortedByName(repos);
+}
+
+/** Everything the user's sign-in token and personal token can see, sign-in first. */
+async function ownTokenRepositories(
+  database: Database,
+  config: Config,
+  user: AppUserRow,
+  deps: Deps,
+): Promise<GithubTokenRepository[]> {
   const signIn = await signInToken(database, config, user, deps).catch(() => "");
   const pat = await getPersonalToken(database, config, user.id);
+  const repositories: GithubTokenRepository[] = [];
   for (const token of [signIn, pat?.token ?? ""]) {
     if (!token) continue;
     try {
-      for (const repository of await listGithubTokenRepositories(token, deps)) {
-        if (repository.canPush && !repos.has(repository.fullName)) {
-          repos.set(repository.fullName, { ...toVcsRepository(repository), access: "write" });
-        }
-      }
+      repositories.push(...(await listGithubTokenRepositories(token, deps)));
     } catch {
       // A rejected or unreachable token contributes nothing; Settings reports it.
     }
   }
+  return repositories;
+}
+
+function sortedByName<T extends VcsRepository>(repos: Map<string, T>): T[] {
   return [...repos.values()].sort((left, right) => left.fullName.localeCompare(right.fullName));
+}
+
+/**
+ * Repositories to offer as read-only context: everything either of the
+ * user's own tokens can see, plus everything a platform credential reached.
+ * Metadata for platform-only repositories is synthesized from the name.
+ */
+export async function listReadableRepositories(
+  database: Database,
+  config: Config,
+  user: AppUserRow,
+  deps: Deps,
+): Promise<VcsRepository[]> {
+  const repos = new Map<string, VcsRepository>();
+  for (const repository of await ownTokenRepositories(database, config, user, deps)) {
+    if (!repos.has(repository.fullName)) {
+      repos.set(repository.fullName, toVcsRepository(repository));
+    }
+  }
+  for (const credential of await listPlatformCredentials(database)) {
+    for (const entry of credential.repoAccess) {
+      if (!repos.has(entry.repo)) {
+        repos.set(entry.repo, toVcsRepository({ fullName: entry.repo, defaultBranch: null }));
+      }
+    }
+  }
+  return sortedByName(repos);
 }
 
 /** A forge client that uses whatever credential the access decision picked. */
@@ -233,7 +279,9 @@ function canPushAnywhere(row: PlatformVcsCredentialRow): boolean {
   return row.repoAccess.some((entry) => entry.access === "write");
 }
 
-function toVcsRepository(repository: GithubTokenRepository): VcsRepository {
+function toVcsRepository(
+  repository: Pick<GithubTokenRepository, "fullName" | "defaultBranch">,
+): VcsRepository {
   const [owner = "", name = ""] = repository.fullName.split("/");
   return {
     provider: "github",

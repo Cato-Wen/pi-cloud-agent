@@ -5,6 +5,7 @@ import {
   type ThinkingLevel,
   type Trigger,
   type WorkspaceRef,
+  type WorkspaceRepo,
 } from "@pi-cloud-agent/protocol";
 import { and, eq, inArray, isNotNull, isNull, lt, or, type SQL, sql } from "drizzle-orm";
 import { CHANNELS, type Database, notify } from "./client";
@@ -25,6 +26,7 @@ export interface CreateSessionInput {
   provider: string;
   repoFullName: string;
   repo: RepoRef;
+  workspaceRepos?: WorkspaceRepo[];
   trigger: Trigger;
   model: string;
   thinkingLevel?: ThinkingLevel;
@@ -65,6 +67,7 @@ export async function createSessionWithRun(
         provider: input.provider,
         repoFullName: input.repoFullName,
         repo: input.repo,
+        workspaceRepos: input.workspaceRepos ?? [],
         model: input.model,
         modelConnectionId: input.modelConnectionId ?? null,
         activeRunId: runId,
@@ -128,7 +131,7 @@ export async function createSessionTurn(
       kind: "manual",
       repo: session.repo,
       prompt,
-      contextRepos: [],
+      contextRepos: session.workspaceRepos,
       source: "manual",
       intent: "general",
     };

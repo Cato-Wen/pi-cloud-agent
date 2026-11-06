@@ -8,6 +8,7 @@ import type {
   SessionRetentionStatus,
   ThinkingLevel,
   Trigger,
+  WorkspaceRepo,
 } from "@pi-cloud-agent/protocol";
 import { sql } from "drizzle-orm";
 import {
@@ -123,6 +124,8 @@ export const sessions = pgTable(
     provider: text("provider").notNull(),
     repoFullName: text("repo_full_name").notNull(),
     repo: jsonb("repo").notNull().$type<RepoRef>(),
+    /** Read-only repositories cloned next to `repo`; copied into every turn's trigger. */
+    workspaceRepos: jsonb("workspace_repos").notNull().default([]).$type<WorkspaceRepo[]>(),
     model: text("model").notNull(),
     modelConnectionId: uuid("model_connection_id").references(() => llmConnections.id, {
       onDelete: "restrict",
