@@ -252,9 +252,11 @@ function ComposerOptions(props: ComposerOptionsProps) {
               entry.access === "write" ? "可写" : entry.access === "read" ? "只读" : undefined,
           }))}
           value={props.repo}
+          allowCustom
           onChange={(value) => {
             const selected = props.repos.find((entry) => entry.fullName === value);
             if (selected) props.onRepoChange(selected);
+            else props.onManualRepoChange(value);
           }}
         />
       )}
@@ -267,8 +269,9 @@ function ComposerOptions(props: ComposerOptionsProps) {
         emptyText="没有匹配的分支"
         options={props.branches.map((name) => ({ value: name }))}
         value={props.branch}
+        allowCustom
         onChange={(value) => props.onBranchChange(value)}
-        disabled={props.branchesLoading || props.branches.length === 0}
+        disabled={props.branchesLoading}
       />
       <ModelSelect
         connections={props.modelConnections}

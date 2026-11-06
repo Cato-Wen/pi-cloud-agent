@@ -13,7 +13,8 @@ const ACCEPT = "application/vnd.github+json";
 const API_VERSION = "2022-11-28";
 const GIT_USERNAME = "x-access-token";
 const PROBE_TIMEOUT_MS = 15_000;
-const MAX_REPO_PAGES = 5;
+/** 100 per page; 1000 repositories is the most a token's listing will walk. */
+const MAX_REPO_PAGES = 10;
 
 export type GithubTokenKind = "classic" | "fine-grained" | "unknown";
 

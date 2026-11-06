@@ -11,6 +11,9 @@ import { type ForgeHttpDeps, fetchJson } from "./http";
 const API_BASE = "https://api.github.com";
 const ACCEPT = "application/vnd.github+json";
 const API_VERSION = "2022-11-28";
+/** 100 per page; 1000 branches or repositories is the most the picker will list. */
+const MAX_BRANCH_PAGES = 10;
+const MAX_REPO_PAGES = 10;
 
 export interface GithubInstallation {
   id: string;
@@ -114,11 +117,19 @@ export function createGitHubProvider(
       if (!parsed) return [];
       if (!token) return [];
       try {
-        const branches = await fetchJson<Array<{ name?: string }>>(
-          `${API_BASE}/repos/${parsed.owner}/${parsed.name}/branches?per_page=100`,
-          { headers: apiHeaders(token), fetchImpl },
-        );
-        return branches.flatMap((branch) => (branch.name ? [branch.name] : []));
+        const names: string[] = [];
+        // Large monorepos carry hundreds of branches; a single page would hide
+        // most of them from the picker. Cap the walk so a runaway repository
+        // cannot stall the dashboard.
+        for (let page = 1; page <= MAX_BRANCH_PAGES; page += 1) {
+          const batch = await fetchJson<Array<{ name?: string }>>(
+            `${API_BASE}/repos/${parsed.owner}/${parsed.name}/branches?per_page=100&page=${page}`,
+            { headers: apiHeaders(token), fetchImpl },
+          );
+          names.push(...batch.flatMap((branch) => (branch.name ? [branch.name] : [])));
+          if (batch.length < 100) break;
+        }
+        return names;
       } catch {
         return [];
       }
@@ -296,7 +307,7 @@ async function listGithubRepositories(
   fetchImpl?: typeof fetch,
 ): Promise<VcsRepository[]> {
   const repositories: VcsRepository[] = [];
-  for (let page = 1; page <= 5; page += 1) {
+  for (let page = 1; page <= MAX_REPO_PAGES; page += 1) {
     const batch = await fetchJson<GithubRepository[]>(
       `${API_BASE}/user/repos?per_page=100&sort=updated&page=${page}`,
       { headers: apiHeaders(accessToken), fetchImpl },

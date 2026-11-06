@@ -62,6 +62,7 @@ export function SearchSelect({
   disabled = false,
   className,
   align = "start",
+  allowCustom = false,
 }: {
   options: SearchSelectOption[];
   value: string;
@@ -73,6 +74,8 @@ export function SearchSelect({
   disabled?: boolean;
   className?: string;
   align?: "start" | "end";
+  /** Offer what was typed as a choice when the list does not contain it (lists are capped). */
+  allowCustom?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -86,12 +89,17 @@ export function SearchSelect({
 
   const selected = options.find((option) => option.value === value);
   const filtered = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    if (!needle) return options;
-    return options.filter((option) =>
-      `${option.label ?? option.value} ${option.hint ?? ""}`.toLowerCase().includes(needle),
-    );
-  }, [options, query]);
+    const typed = query.trim();
+    const needle = typed.toLowerCase();
+    const matches = needle
+      ? options.filter((option) =>
+          `${option.label ?? option.value} ${option.hint ?? ""}`.toLowerCase().includes(needle),
+        )
+      : options;
+    const exact = options.some((option) => option.value.toLowerCase() === needle);
+    if (!allowCustom || !typed || exact) return matches;
+    return [...matches, { value: typed, label: `使用「${typed}」`, hint: "不在列表中" }];
+  }, [options, query, allowCustom]);
 
   useEffect(() => {
     if (!open) return;
@@ -158,8 +166,8 @@ export function SearchSelect({
           className,
         )}
       >
-        <span className={cn("truncate", !selected && "text-muted-foreground")}>
-          {selected ? (selected.label ?? selected.value) : placeholder}
+        <span className={cn("truncate", !selected && !value && "text-muted-foreground")}>
+          {selected ? (selected.label ?? selected.value) : value || placeholder}
         </span>
         <ChevronDownIcon className="size-3.5 shrink-0 opacity-60" />
       </button>
