@@ -15,8 +15,11 @@ It reaches exactly one thing: `CONTROL_PLANE_URL`, outbound only.
 | File | Role |
 |---|---|
 | `run.ts` | entry point and one terminal report |
-| `config.ts` | parses sandbox environment into typed values |
-| `workspace.ts` | credential helper, clone, checkout, and git diff |
+| `config.ts` | parses sandbox environment into typed values, including the `WORKSPACE_REPOS` layout |
+| `command.ts` | bounded child-process runner shared by the git modules |
+| `workspace.ts` | credential helper, clone, checkout, and git diff for the primary repository |
+| `context-repos.ts` | clones read-only context repositories next to the primary one and disables push on them |
+| `git-credential-helper.ts` | generates the per-repository credential helper script; variable names only |
 | `agent.ts` | one Pi turn and native telemetry |
 | `oauth-credential.ts` | persists Pi OAuth rotation before cleanup |
 | `session-state.ts` | authenticated JSONL checkpoint download/upload |

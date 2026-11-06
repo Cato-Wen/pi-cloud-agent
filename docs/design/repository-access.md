@@ -399,8 +399,8 @@ classic PAT 已验证可用且不需要审批（§2.2）。Settings 引导顺序
 `vcs_connections` PAT 行、`platform_vcs_credentials` + 探测；`packages/vcs/github-token.ts`（`inspectGithubToken`、`listGithubTokenRepositories`、`probeGithubRepoAccess`）；`/vcs/github/pat`、`/admin/credentials`；Settings PAT 卡片、Admin Credentials 页；`isOperator` 挪到 `auth/operator.ts`；`vcs/repository-access.ts` 统一判定并接入 `meta.ts`、`manual.ts`、broker（含 `GIT_AUTHOR_*`）。实施计划：`docs/superpowers/plans/2026-11-05-phase1-credentials.md`。
 完成后开发不用等 App 审批。
 
-### 阶段 2：多仓库工作区
-`workspace_repos`、`repo_full_name` 可空；runtime 多 clone、按仓库选 token 的 credential helper、只读仓库禁 push；工作区提示词；开发模式上下文仓库 UI；diff 侧栏兼容。
+### 阶段 2：多仓库工作区 ✅（同一分支，2026-11-06）
+`WorkspaceRepo` / `SandboxWorkspaceRepo`、`planWorkspace`、`describeWorkspace`（`packages/protocol`）；`sessions.workspace_repos`、`trigger.contextRepos`、`POST /sessions` 与 `/runs` 的 `contextRepos`、`GET /repos/context`；broker 逐仓库签发 `SCM_TOKEN_<n>`、`WORKSPACE_REPOS`、每轮前置的工作区说明；runtime 多 clone、按仓库选 token 的 credential helper 脚本、只读仓库禁 push、恢复时补 clone；新建任务页上下文仓库按钮、会话页只读列表；diff 侧栏仍只看主仓库。`repo_full_name` 可空与 `agent_id` 留到阶段 3。实施计划：`docs/superpowers/plans/2026-11-06-phase2-workspace.md`。
 
 ### 阶段 3：Agent
 `agents` / `agent_skills` / `agent_assignments` / `user_agent_overrides`；`resolveAgentForRun`；`/admin/agents`、`/agents/mine`、override；新建任务页下拉框合并 agent + 仓库；Session 页模式展示；Settings → My agents。

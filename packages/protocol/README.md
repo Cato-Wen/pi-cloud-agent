@@ -17,7 +17,8 @@ Nothing here executes anything or touches the network.
 | `github-review.ts` | structured review submission/context schemas used across the runtime/controller boundary |
 | `github-task.ts` | structured context/submission schemas for replies to issue and inline review comments |
 | `task.ts` | `TaskSpec`: the concrete request handed to infrastructure |
-| `repo.ts` | `RepoRef`: head and optional base clone coordinates plus one pinned revision |
+| `repo.ts` | `RepoRef`: head and optional base clone coordinates plus one pinned revision; `WorkspaceRepo`: a persisted context repository |
+| `workspace.ts` | `SandboxWorkspaceRepo`, `planWorkspace` (paths and token variable names) and `describeWorkspace` (the prompt preamble) |
 | `events.ts` | the two outbound channels: `RunEventInput` (telemetry) and `RunStatusReport` (terminal) |
 | `secret.ts` | `Secret`, `createRedactor`, `redactUrlCredentials` |
 | `env.ts` | `SANDBOX_ENV` and `SANDBOX_PATHS`: the controller/sandbox environment contract |

@@ -165,7 +165,7 @@ psql -c "select id, active_run_id, latest_run_id, turn_count, sandbox_image_ref,
 
 ```text
 status: queued → provisioning → running → succeeded
-events: git.cloned → git.checkout_ready
+events: git.cloned → git.checkout_ready → git.context_cloned…
         → agent.session_start → agent.turn_start → message… → token…
         → tool_call… → agent.turn_end → agent.session_complete → status{done}
 ```
@@ -229,6 +229,10 @@ Signing in grants no repository access. A task's primary repository must be writ
 3. Re-probe after changing the token's repositories on GitHub; replace it before it expires (the card turns amber 14 days ahead).
 
 Organizations where the GitHub App is installed need no platform credential: users read and write there with their own sign-in.
+
+### Context repositories
+
+A task can clone read-only repositories next to its primary one: the paperclip button at the right of the composer lists everything the user's credentials can read (sign-in, personal token, and read-only platform credentials), and the choice is remembered per primary repository. Each context repository is cloned to `/workspace/<name>` (`/workspace/<owner>__<name>` on a name clash), the agent's prompt opens with the layout on every turn, and the diff sidebar keeps showing the primary repository only. Expect one `git.context_cloned` event per context repository; a resumed workspace clones only the ones it is missing. A context repository the user can no longer read fails the request with `Context repository <owner/name>: …`.
 
 ## Plugins marketplace
 

@@ -34,7 +34,12 @@ Integration tests share one database and truncate between tests, so they run in 
 | `packages/sandbox/registry.test.ts` | a misconfigured provider fails at startup, naming the variable and the alternatives |
 | `packages/runtime/reporter.test.ts` | secrets do not leave the sandbox; telemetry loss cannot fail a run; the terminal status retries |
 | `packages/runtime/session-state.test.ts` | a transient control-plane 502 does not fail Pi checkpoint restore |
-| `packages/runtime/workspace.test.ts` | Git checkout reuse and diff capture stay bounded |
+| `packages/runtime/workspace.test.ts` | Git checkout reuse and diff capture stay bounded; context repositories clone after the primary, only the missing ones on resume, read-only ones cannot push |
+| `packages/runtime/git-credential-helper.test.ts` | the helper script maps host/path to a token variable and never embeds a value |
+| `packages/runtime/config.test.ts` | numbered per-repository tokens are redacted like the primary one |
+| `packages/protocol/workspace.test.ts` | workspace paths, clashes, token variable names, and the prompt preamble |
+| `apps/controller/http/context-repos.integration.test.ts` | context repositories are listed from every readable credential, resolved before anything durable is written, and persisted on the session |
+| `apps/controller/plugins/catalog.test.ts` | the workspace description precedes the prompt on every turn, after skills on the first |
 | `packages/sandbox/project-image.live.test.ts` | app runtime installation into plain Debian and file preservation through a real microSandbox snapshot/resume; no model credentials |
 | `apps/controller/http/environments.integration.test.ts` | per-repository image mappings, preflight, and clearing |
 | `apps/controller/db/runs.integration.test.ts` | the SQL properties: exclusive claim, guarded transitions, gapless sequences under concurrency |
@@ -44,7 +49,7 @@ Integration tests share one database and truncate between tests, so they run in 
 | `packages/vcs/github-token.test.ts` | a token's identity, scopes and expiry come from `GET /user`; read or write comes from git's `info/refs` handshake, not REST |
 | `apps/controller/http/personal-token.integration.test.ts` | a personal token must belong to the signed-in account; status never echoes the token; a rejected token reads as invalid |
 | `apps/controller/http/admin.integration.test.ts` | operators only; a platform credential records what git allowed per private repository |
-| `apps/controller/vcs/repository-access.integration.test.ts` | credential order; a rejected personal token fails instead of falling back; a writable platform credential is never used for read; runs carry the user as git author |
+| `apps/controller/vcs/repository-access.integration.test.ts` | credential order; a rejected personal token fails instead of falling back; a writable platform credential is never used for read; runs carry the user as git author; one credential per context repository, none means no run |
 | `apps/controller/integrations/github.test.ts` | webhook HMAC verification, event/action filtering, and exact PR head projection |
 | `apps/controller/db/integrations.integration.test.ts` | delivery idempotency, leases, and guarded completion |
 | `apps/web/lib/foldActivityEvents.test.ts` | completed-turn thinking renders as one Thought block, including legacy per-word logs |
