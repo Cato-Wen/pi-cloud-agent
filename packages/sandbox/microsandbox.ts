@@ -27,6 +27,8 @@ const envSchema = z.object({
   MICROSANDBOX_IMAGE: z.string().default("pi-cloud-agent:local"),
   SANDBOX_RUNTIME_DIR: z.string().default(""),
   MICROSANDBOX_ROOT_DISK_MIB: z.coerce.number().int().positive().default(8192),
+  /** Guest RAM per sandbox. Lower it on a developer laptop; the default suits CI builds. */
+  MICROSANDBOX_MEMORY_MB: z.coerce.number().int().min(512).default(SANDBOX_MEMORY_MB),
   MICROSANDBOX_SNAPSHOT_DIR: z.string().default(""),
   MICROSANDBOX_ALLOW_HOST: z
     .enum(["true", "false"])
@@ -49,6 +51,7 @@ export function createMicroSandboxProvider(
     MICROSANDBOX_IMAGE: defaultImage,
     SANDBOX_RUNTIME_DIR: runtimeDirectory,
     MICROSANDBOX_ROOT_DISK_MIB: rootDiskMib,
+    MICROSANDBOX_MEMORY_MB: memoryMb,
     MICROSANDBOX_SNAPSHOT_DIR: configuredSnapshotDir,
     MICROSANDBOX_ALLOW_HOST: allowHost,
   } = envSchema.parse(env);
@@ -70,6 +73,7 @@ export function createMicroSandboxProvider(
           spec,
           defaultImage,
           rootDiskMib,
+          memoryMb,
           allowHost,
         ).create();
         await installRuntime(sandbox, runtimeDirectory, spec.timeoutSeconds);
@@ -102,6 +106,7 @@ export function createMicroSandboxProvider(
           spec,
           defaultImage,
           rootDiskMib,
+          memoryMb,
           allowHost,
         )
           .detached(true)
@@ -144,7 +149,7 @@ export function createMicroSandboxProvider(
           .entrypoint(["sleep", "infinity"])
           .user("root")
           .cpus(SANDBOX_CPU_COUNT)
-          .memory(SANDBOX_MEMORY_MB)
+          .memory(memoryMb)
           .network((network) => network.policy(buildNetworkPolicy(spec, allowHost)))
           .detached(true)
           .maxDuration(spec.timeoutSeconds)
@@ -249,6 +254,7 @@ function configureImageSandbox(
   spec: SandboxSpec,
   defaultImage: string,
   rootDiskMib: number,
+  memoryMb: number,
   allowHost: boolean,
 ): SandboxBuilder {
   return builder
@@ -257,7 +263,7 @@ function configureImageSandbox(
     .entrypoint(["sleep", "infinity"])
     .user("root")
     .cpus(SANDBOX_CPU_COUNT)
-    .memory(SANDBOX_MEMORY_MB)
+    .memory(memoryMb)
     .network((network) => network.policy(buildNetworkPolicy(spec, allowHost)))
     .maxDuration(spec.timeoutSeconds);
 }
