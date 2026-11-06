@@ -2,9 +2,12 @@
 
 import type {
   LlmConnectionSummary,
+  ReposResponse,
   ThinkingLevel,
-  VcsRepository,
 } from "@pi-cloud-agent/protocol";
+
+type PickerRepo = ReposResponse["repos"][number];
+
 import { FolderGit2Icon, GitBranchIcon } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -12,13 +15,7 @@ import { Suspense, useEffect, useState } from "react";
 import { ChatComposer } from "@/components/ChatComposer";
 import { ModelSelect } from "@/components/ModelSelect";
 import { ThinkingLevelSelect } from "@/components/ThinkingLevelSelect";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SearchSelect } from "@/components/ui/search-select";
 import { api } from "@/lib/api";
 import {
   defaultModelSelection,
@@ -39,7 +36,7 @@ export default function ChatPage() {
 function NewSession() {
   const router = useRouter();
   const params = useSearchParams();
-  const [repos, setRepos] = useState<VcsRepository[]>([]);
+  const [repos, setRepos] = useState<PickerRepo[]>([]);
   const [modelConnections, setModelConnections] = useState<LlmConnectionSummary[]>([]);
   const [repo, setRepo] = useState(params.get("repo") ?? "");
   const [provider, setProvider] = useState("github");
@@ -213,8 +210,8 @@ function NewSession() {
 
 type ComposerOptionsProps = {
   repo: string;
-  repos: VcsRepository[];
-  onRepoChange: (value: VcsRepository) => void;
+  repos: PickerRepo[];
+  onRepoChange: (value: PickerRepo) => void;
   onManualRepoChange: (value: string) => void;
   modelSelection: string;
   modelConnections: LlmConnectionSummary[];
@@ -243,42 +240,36 @@ function ComposerOptions(props: ComposerOptionsProps) {
           onChange={(event) => props.onManualRepoChange(event.target.value)}
         />
       ) : (
-        <Select
+        <SearchSelect
+          ariaLabel="仓库"
+          className="max-w-48"
+          placeholder="仓库"
+          searchPlaceholder="搜索仓库，例如 master-data"
+          emptyText="没有匹配的仓库"
+          options={props.repos.map((entry) => ({
+            value: entry.fullName,
+            hint:
+              entry.access === "write" ? "可写" : entry.access === "read" ? "只读" : undefined,
+          }))}
           value={props.repo}
-          onValueChange={(value) => {
+          onChange={(value) => {
             const selected = props.repos.find((entry) => entry.fullName === value);
             if (selected) props.onRepoChange(selected);
           }}
-        >
-          <SelectTrigger aria-label="仓库" className={triggerClass}>
-            <SelectValue placeholder="仓库" />
-          </SelectTrigger>
-          <SelectContent align="start">
-            {props.repos.map((entry) => (
-              <SelectItem key={`${entry.provider}:${entry.fullName}`} value={entry.fullName}>
-                {entry.fullName}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        />
       )}
       <GitBranchIcon className="ml-1 size-3.5 shrink-0 text-muted-foreground" />
-      <Select
+      <SearchSelect
+        ariaLabel="分支"
+        className="max-w-36"
+        placeholder={props.branchesLoading ? "加载中…" : "分支"}
+        searchPlaceholder="搜索分支"
+        emptyText="没有匹配的分支"
+        options={props.branches.map((name) => ({ value: name }))}
         value={props.branch}
-        onValueChange={(value) => props.onBranchChange(value ?? "")}
+        onChange={(value) => props.onBranchChange(value)}
         disabled={props.branchesLoading || props.branches.length === 0}
-      >
-        <SelectTrigger aria-label="分支" className={triggerClass}>
-          <SelectValue placeholder={props.branchesLoading ? "加载中…" : "分支"} />
-        </SelectTrigger>
-        <SelectContent>
-          {props.branches.map((name) => (
-            <SelectItem key={name} value={name}>
-              {name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      />
       <ModelSelect
         connections={props.modelConnections}
         value={props.modelSelection}

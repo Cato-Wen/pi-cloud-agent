@@ -14,6 +14,7 @@ import type {
   PullRequestReviewsResponse,
   RepositoryEnvironmentSummary,
   RepositoryEnvironmentsResponse,
+  ReposResponse,
   ReviewRepositoriesResponse,
   ReviewRepositoryRequest,
   RunDetail,
@@ -26,7 +27,6 @@ import type {
   SessionSummary,
   VcsConnectionSummary,
   VcsConnectionsResponse,
-  VcsRepository,
 } from "@pi-cloud-agent/protocol";
 
 export type LlmOAuthEvent =
@@ -155,8 +155,8 @@ export const api = {
   cancelRun: (id: string): Promise<{ status: string }> =>
     request<{ status: string }>(`/runs/${id}/cancel`, { method: "POST" }),
 
-  listRepos: (): Promise<VcsRepository[]> =>
-    cached("repos", () => request<{ repos: VcsRepository[] }>("/repos").then((r) => r.repos)),
+  listRepos: (): Promise<ReposResponse["repos"]> =>
+    cached("repos", () => request<ReposResponse>("/repos").then((r) => r.repos)),
 
   listBranches: (provider: string, repo: string): Promise<BranchesResponse> =>
     request<BranchesResponse>(
