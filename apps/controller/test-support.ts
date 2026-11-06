@@ -229,6 +229,7 @@ export function manualTrigger(overrides: Partial<Trigger["repo"]> = {}): Trigger
   return {
     kind: "manual",
     prompt: "Summarize this repository.",
+    contextRepos: [],
     repo: {
       provider: "github",
       host: "github.com",

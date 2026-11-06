@@ -28,6 +28,21 @@ export const repoRefSchema = z.object({
 
 export type RepoRef = z.infer<typeof repoRefSchema>;
 
+/**
+ * One repository in a task's workspace beyond the primary: cloned alongside
+ * it, with its own credential, at the access level the task was granted.
+ */
+export const workspaceRepoSchema = z.object({
+  provider: z.string().min(1),
+  /** "ct-kb/team-cookbook-kb" */
+  fullName: z.string().min(3),
+  access: z.enum(["read", "write"]),
+  role: z.enum(["primary", "context"]),
+  ref: repoRefSchema,
+});
+
+export type WorkspaceRepo = z.infer<typeof workspaceRepoSchema>;
+
 /** A repository exposed by a connected VCS identity. */
 export interface VcsRepository {
   provider: string;

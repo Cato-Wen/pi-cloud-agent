@@ -110,6 +110,7 @@ describe("trusted publication callbacks", () => {
         kind: "pr_opened",
         source: "github",
         intent: "github_review",
+        contextRepos: [],
         integrationId: "42",
         prompt: "Review this PR",
         repo: {

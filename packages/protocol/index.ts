@@ -22,3 +22,4 @@ export * from "./session-command";
 export * from "./task";
 export * from "./trigger";
 export * from "./vcs";
+export * from "./workspace";

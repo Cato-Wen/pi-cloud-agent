@@ -85,6 +85,7 @@ export function sessionRoutes(
       queued = await queueSessionCommand(c.get("database"), config, {
         userId: user.id,
         repo: manual.repo,
+        contextRepos: [],
         prompt: body.prompt,
         mode: "new_session",
         intent: "general",
@@ -148,6 +149,7 @@ export function sessionRoutes(
         userId: user.id,
         sessionId: session.id,
         repo: session.repo,
+        contextRepos: [],
         prompt: parsed.data.prompt,
         mode: "append_turn",
         intent: "general",
@@ -430,6 +432,7 @@ async function toSessionSummary(
     pinned: session.pinned,
     provider: session.provider,
     repo: session.repoFullName,
+    contextRepos: [],
     model: session.model,
     modelConnectionId: session.modelConnectionId,
     activeRunId: session.activeRunId,

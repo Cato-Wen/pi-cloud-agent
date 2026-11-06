@@ -212,6 +212,7 @@ function triggerFor(command: SessionCommand): Trigger {
   return {
     kind,
     repo: command.repo,
+    contextRepos: command.contextRepos,
     prompt: command.prompt,
     source: command.provenance.source,
     deliveryId: command.provenance.deliveryId,

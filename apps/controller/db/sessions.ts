@@ -128,6 +128,7 @@ export async function createSessionTurn(
       kind: "manual",
       repo: session.repo,
       prompt,
+      contextRepos: [],
       source: "manual",
       intent: "general",
     };

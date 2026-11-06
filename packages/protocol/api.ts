@@ -19,6 +19,8 @@ export const createRunRequestSchema = z.object({
   provider: z.string().default("github"),
   /** Branch to clone. Omitted means "ask the provider for the default". */
   branch: z.string().nullish(),
+  /** Full names of read-only repositories to clone next to `repo`. */
+  contextRepos: z.array(z.string().min(3)).max(8).default([]),
   /** User-owned model connection. Required for every task. */
   modelConnectionId: z.string().uuid(),
   /** Model selected from the connection's available model catalog. */
@@ -101,6 +103,8 @@ export interface SessionSummary {
   title: string;
   provider: string;
   repo: string;
+  /** Read-only repositories cloned alongside `repo`, by full name. */
+  contextRepos: string[];
   model: string;
   modelConnectionId: string | null;
   activeRunId: string | null;

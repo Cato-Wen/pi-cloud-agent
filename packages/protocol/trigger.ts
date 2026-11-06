@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { provenanceSchema } from "./provenance";
-import { repoRefSchema } from "./repo";
+import { repoRefSchema, workspaceRepoSchema } from "./repo";
 
 /**
  * A normalized reason a run exists.
@@ -23,6 +23,8 @@ export type TriggerKind = (typeof TRIGGER_KINDS)[number];
 export const triggerSchema = z.object({
   kind: triggerKindSchema,
   repo: repoRefSchema,
+  /** Read-only repositories cloned next to `repo`; a snapshot of the session's choice. */
+  contextRepos: z.array(workspaceRepoSchema).default([]),
   /** The free-form request, for manual triggers. */
   prompt: z.string().optional(),
   /** The comment body, for pr_comment triggers. */

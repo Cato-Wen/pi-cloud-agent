@@ -55,6 +55,8 @@ export const SANDBOX_ENV = {
   /** Git credentials, consumed by the checkout's credential helper. */
   scmToken: "SCM_TOKEN",
   scmTokenUsername: "SCM_TOKEN_USERNAME",
+  /** JSON `SandboxWorkspaceRepo[]`: every repository to clone, its path and token variable. Empty = primary only. */
+  workspaceRepos: "WORKSPACE_REPOS",
 } as const;
 
 export type SandboxEnvKey = keyof typeof SANDBOX_ENV;

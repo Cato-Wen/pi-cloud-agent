@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { thinkingLevelSchema } from "./llm";
 import { provenanceSchema } from "./provenance";
-import { repoRefSchema } from "./repo";
+import { repoRefSchema, workspaceRepoSchema } from "./repo";
 
 /** The execution shape shared by chat, API, and external integrations. */
 export const SESSION_COMMAND_MODES = ["new_session", "append_turn", "standalone_run"] as const;
@@ -19,6 +19,7 @@ export type SessionCommandProvenance = z.infer<typeof sessionCommandProvenanceSc
 
 export const sessionCommandSchema = z.object({
   repo: repoRefSchema,
+  contextRepos: z.array(workspaceRepoSchema).default([]),
   prompt: z.string().trim().min(1).max(200_000),
   mode: sessionCommandModeSchema.default("new_session"),
   intent: sessionCommandIntentSchema.default("general"),
