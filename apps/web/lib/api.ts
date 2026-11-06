@@ -158,6 +158,12 @@ export const api = {
   listRepos: (): Promise<ReposResponse["repos"]> =>
     cached("repos", () => request<ReposResponse>("/repos").then((r) => r.repos)),
 
+  /** Read-only repositories a task may clone next to `primary`; never cached, access can change. */
+  listContextRepos: (primary: string): Promise<ReposResponse["repos"]> =>
+    request<ReposResponse>(`/repos/context?primary=${encodeURIComponent(primary)}`).then(
+      (r) => r.repos,
+    ),
+
   listBranches: (provider: string, repo: string): Promise<BranchesResponse> =>
     request<BranchesResponse>(
       `/repos/branches?provider=${encodeURIComponent(provider)}&repo=${encodeURIComponent(repo)}`,

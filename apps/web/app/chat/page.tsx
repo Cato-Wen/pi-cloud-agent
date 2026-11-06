@@ -13,10 +13,12 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { ChatComposer } from "@/components/ChatComposer";
+import { ContextRepoPicker } from "@/components/ContextRepoPicker";
 import { ModelSelect } from "@/components/ModelSelect";
 import { ThinkingLevelSelect } from "@/components/ThinkingLevelSelect";
 import { SearchSelect } from "@/components/ui/search-select";
 import { api } from "@/lib/api";
+import { loadContextRepos, saveContextRepos } from "@/lib/context-repos";
 import {
   defaultModelSelection,
   parseModelSelection,
@@ -46,6 +48,7 @@ function NewSession() {
   const [branches, setBranches] = useState<string[]>([]);
   const [branch, setBranch] = useState("");
   const [branchesLoading, setBranchesLoading] = useState(false);
+  const [contextRepos, setContextRepos] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -103,6 +106,11 @@ function NewSession() {
     };
   }, [provider, repo]);
 
+  // The last context repositories used with this primary repository come back by default.
+  useEffect(() => {
+    setContextRepos(provider === "github" ? loadContextRepos(repo) : []);
+  }, [provider, repo]);
+
   const canSubmit =
     Boolean(repo) && Boolean(prompt.trim()) && !submitting && Boolean(modelSelection);
   const submit = async () => {
@@ -120,8 +128,10 @@ function NewSession() {
         modelConnectionId: selection.connectionId,
         modelId: selection.modelId,
         thinkingLevel,
+        contextRepos,
       });
       saveSessionTitle(session.id, prompt.trim());
+      saveContextRepos(repo, contextRepos);
       router.push(`/sessions/${session.id}`);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
@@ -170,6 +180,8 @@ function NewSession() {
                 branches={branches}
                 branchesLoading={branchesLoading}
                 onBranchChange={setBranch}
+                contextRepos={contextRepos}
+                onContextReposChange={setContextRepos}
               />
             }
           />
@@ -222,6 +234,8 @@ type ComposerOptionsProps = {
   branches: string[];
   branchesLoading: boolean;
   onBranchChange: (value: string) => void;
+  contextRepos: string[];
+  onContextReposChange: (value: string[]) => void;
 };
 
 function ComposerOptions(props: ComposerOptionsProps) {
@@ -292,6 +306,12 @@ function ComposerOptions(props: ComposerOptionsProps) {
         value={props.thinkingLevel}
         onChange={props.onThinkingLevelChange}
         className={triggerClass}
+      />
+      <ContextRepoPicker
+        primary={props.repo}
+        value={props.contextRepos}
+        onChange={props.onContextReposChange}
+        className="ml-auto"
       />
     </>
   );

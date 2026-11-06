@@ -361,6 +361,9 @@ function SessionMeta({
         {run ? <StatusBadge status={run.status} /> : null}
 
         {repo ? <RepoLine repo={repo} provider={provider} /> : null}
+        {session?.contextRepos.map((name) => (
+          <ContextRepoLine key={name} repo={name} provider={provider} />
+        ))}
 
         {branch ? (
           <p className="flex min-w-0 items-center gap-1.5 text-foreground">
@@ -409,6 +412,19 @@ function RepoLine({ repo, provider }: { repo: string; provider: string | null })
     <p className="flex min-w-0 items-center gap-1.5 text-foreground">
       <ForgeIcon provider={provider} />
       <span className="truncate font-mono">{repo}</span>
+    </p>
+  );
+}
+
+/** A read-only repository cloned next to the primary one. */
+function ContextRepoLine({ repo, provider }: { repo: string; provider: string | null }) {
+  return (
+    <p className="flex min-w-0 items-center gap-1.5 text-foreground">
+      <ForgeIcon provider={provider} />
+      <span className="truncate font-mono">{repo}</span>
+      <span className="shrink-0 rounded border border-border px-1 text-[10px] text-muted-foreground">
+        只读
+      </span>
     </p>
   );
 }
