@@ -59,6 +59,10 @@ export async function runAgentSession(
             id: config.model.name,
             name: config.model.name,
             reasoning: true,
+            // "off" sends no thinking parameter at all. Newer Claude models
+            // reject `thinking: { type: "disabled" }` outright, and omitting
+            // the field is the provider-default on every model.
+            thinkingLevelMap: { off: null },
             input: ["text"],
             cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
             contextWindow: config.model.contextWindow,
