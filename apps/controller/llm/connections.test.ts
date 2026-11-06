@@ -36,7 +36,9 @@ describe("testLlmEndpoint", () => {
     );
   });
 
-  it("uses Anthropic authentication and the messages endpoint", async () => {
+  // The run calls the Anthropic SDK, which posts to `${baseUrl}/v1/messages`.
+  // The test must hit the same URL, or it rejects a base URL the run accepts.
+  it("uses Anthropic authentication and the URL the Anthropic SDK calls", async () => {
     const fetchMock = vi
       .fn<typeof fetch>()
       .mockResolvedValue(new Response("{}", { status: 200 }));
@@ -53,7 +55,7 @@ describe("testLlmEndpoint", () => {
     );
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "https://api.anthropic.com/messages",
+      "https://api.anthropic.com/v1/messages",
       expect.objectContaining({
         headers: {
           "Content-Type": "application/json",

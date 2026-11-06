@@ -338,10 +338,12 @@ export function toSummary(row: LlmConnectionRow): LlmConnectionSummary {
   };
 }
 
+// Each path must match what the SDK the run uses appends to the base URL.
+// The OpenAI SDK appends the bare path; the Anthropic SDK prefixes it with /v1.
 function endpointFor(api: LlmApi): string {
   if (api === "openai-completions") return "/chat/completions";
   if (api === "openai-responses" || api === "openai-codex-responses") return "/responses";
-  return "/messages";
+  return "/v1/messages";
 }
 
 function requestBody(api: LlmApi, model: string): Record<string, unknown> {
