@@ -313,7 +313,7 @@ agent 模式：`system_prompt`（agent 或个人 override）作为 Pi 的 `appen
 
 ### 7.4 开发模式的上下文仓库
 
-新建任务页在选了主仓库后，出现"上下文仓库（只读）"多选：候选 = 本人 PAT 能读的仓库 ∪ 平台凭证能读的仓库，去掉主仓库。创建 session 时一起写入 `workspace_repos`，沙箱启动时一起 clone。
+新建任务页在选了主仓库后，出现"上下文仓库（只读）"多选：候选 = 本人登录 token 与 PAT 能读的仓库，去掉主仓库。平台凭证不在此列：沙箱属于选仓库的人，平台凭证只通过阶段 3 的 agent 分配借出。创建 session 时一起写入 `workspace_repos`，沙箱启动时一起 clone。
 
 ## 8. 运行时资源下发
 

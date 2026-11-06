@@ -211,9 +211,10 @@ async function mintGithubRepositoryToken(
 }
 
 /**
- * Context repositories are read-only, so any credential that can read them
- * will do. The first one nobody can read fails provisioning: a workspace
- * missing a repository the user asked for is worse than no run.
+ * Context repositories are read-only, so any of the user's own credentials
+ * that can read them will do. The first one nobody can read fails
+ * provisioning: a workspace missing a repository the user asked for is worse
+ * than no run.
  */
 async function mintContextTokens(
   config: Config,
@@ -230,9 +231,7 @@ async function mintContextTokens(
       user,
       repo.fullName,
       "read",
-      {
-        fetchImpl,
-      },
+      { fetchImpl, ownCredentialsOnly: true },
     );
     if (access.mode === "none") {
       throw new Error(`Context repository ${repo.fullName}: ${access.reason}`);

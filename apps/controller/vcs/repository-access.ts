@@ -10,10 +10,7 @@ import {
 } from "@pi-cloud-agent/vcs";
 import type { Config } from "../config";
 import type { Database } from "../db/client";
-import {
-  findPlatformCredentialsForRepo,
-  listPlatformCredentials,
-} from "../db/platform-credentials";
+import { findPlatformCredentialsForRepo } from "../db/platform-credentials";
 import type { AppUserRow, PlatformVcsCredentialRow } from "../db/schema";
 import { getVcsAccessToken } from "./connections";
 import { getPersonalToken } from "./personal-token";
@@ -41,6 +38,12 @@ export type AccessNeed = "read" | "write";
 
 interface Deps {
   fetchImpl: typeof fetch;
+  /**
+   * Only the user's own sign-in and personal tokens. Context repositories use
+   * this: a platform credential is an operator's long-lived token and must not
+   * enter a sandbox any signed-in user chose. Phase 3 lends it through agents.
+   */
+  ownCredentialsOnly?: boolean;
 }
 
 /** The sign-in token is refreshed if it would expire before the longest run could finish. */
@@ -60,7 +63,7 @@ export async function resolveRepositoryAccess(
   const viaPat = await personalTokenAccess(database, config, user, repoFullName, need, deps);
   if (viaPat) return viaPat;
 
-  if (need === "read") {
+  if (need === "read" && !deps.ownCredentialsOnly) {
     const viaPlatform = await platformReadAccess(database, config, repoFullName);
     if (viaPlatform) return viaPlatform;
   }
@@ -117,8 +120,8 @@ function sortedByName<T extends VcsRepository>(repos: Map<string, T>): T[] {
 
 /**
  * Repositories to offer as read-only context: everything either of the
- * user's own tokens can see, plus everything a platform credential reached.
- * Metadata for platform-only repositories is synthesized from the name.
+ * user's own tokens can see. Platform credentials are deliberately absent;
+ * see `Deps.ownCredentialsOnly`.
  */
 export async function listReadableRepositories(
   database: Database,
@@ -130,13 +133,6 @@ export async function listReadableRepositories(
   for (const repository of await ownTokenRepositories(database, config, user, deps)) {
     if (!repos.has(repository.fullName)) {
       repos.set(repository.fullName, toVcsRepository(repository));
-    }
-  }
-  for (const credential of await listPlatformCredentials(database)) {
-    for (const entry of credential.repoAccess) {
-      if (!repos.has(entry.repo)) {
-        repos.set(entry.repo, toVcsRepository({ fullName: entry.repo, defaultBranch: null }));
-      }
     }
   }
   return sortedByName(repos);

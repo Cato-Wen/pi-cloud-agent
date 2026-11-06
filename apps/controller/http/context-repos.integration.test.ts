@@ -1,5 +1,6 @@
 import type { ReposResponse, SessionDetail, SessionSummary } from "@pi-cloud-agent/protocol";
 import { expect, it } from "vitest";
+import { insertPlatformCredential } from "../db/platform-credentials";
 import { getRun } from "../db/runs";
 import {
   bindTestUser,
@@ -12,8 +13,11 @@ import { type FakeGithubSpec, fakeGithubFetch } from "../test-support-github";
 import { createApp } from "./app";
 
 const PAT = "ghp_developer0000000000000000000000000dEv1";
+const PLATFORM = "github_pat_platformreadonly0000000000RdOn";
 const PRIMARY = "food-truck/mdm";
 const KB = "ct-kb/team-cookbook-kb";
+/** Readable by a platform credential only; the user's own token cannot see it. */
+const OTHER_KB = "ct-kb/other-kb";
 
 const github: Record<string, FakeGithubSpec> = {
   [PAT]: {
@@ -23,6 +27,10 @@ const github: Record<string, FakeGithubSpec> = {
       { full_name: PRIMARY, private: true, push: true, default_branch: "develop" },
       { full_name: KB, private: true, push: false, default_branch: "main" },
     ],
+  },
+  [PLATFORM]: {
+    user: { id: 1, login: "platform-bot" },
+    repos: [{ full_name: OTHER_KB, private: true, push: false, default_branch: "main" }],
   },
 };
 
@@ -108,6 +116,31 @@ it("carries the session's context repositories into a follow-up turn", async () 
   const { id } = await json<{ id: string }>(turn);
   const run = await getRun(bound().database, id);
   expect(run?.trigger.contextRepos.map((repo) => repo.fullName)).toEqual([KB]);
+});
+
+it("never lends a platform credential for a context repository", async () => {
+  await bindPat();
+  const { encryptSecret } = await import("../secrets/crypto");
+  await insertPlatformCredential(bound().database, {
+    provider: "github",
+    label: "ct-kb read-only",
+    accountId: "1",
+    accountLogin: "platform-bot",
+    accessToken: encryptSecret(PLATFORM, config.vcs.encryptionKey),
+    expiresAt: null,
+    repoAccess: [{ repo: OTHER_KB, access: "read" }],
+    probedAt: new Date(),
+    updatedBy: null,
+  });
+  const listed = await json<ReposResponse>(
+    await app().request(`/repos/context?primary=${encodeURIComponent(PRIMARY)}`, {
+      headers: bound().headers,
+    }),
+  );
+  expect(listed.repos.map((repo) => repo.fullName)).toEqual([KB]);
+  const response = await createSession([OTHER_KB]);
+  expect(response.status).toBe(422);
+  expect((await json<{ error: string }>(response)).error).toContain(OTHER_KB);
 });
 
 it("refuses a context repository nobody can read, naming it", async () => {

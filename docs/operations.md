@@ -232,7 +232,7 @@ Organizations where the GitHub App is installed need no platform credential: use
 
 ### Context repositories
 
-A task can clone read-only repositories next to its primary one: the paperclip button at the right of the composer lists everything the user's credentials can read (sign-in, personal token, and read-only platform credentials), and the choice is remembered per primary repository. Each context repository is cloned to `/workspace/<name>` (`/workspace/<owner>__<name>` on a name clash), the agent's prompt opens with the layout on every turn, and the diff sidebar keeps showing the primary repository only. Expect one `git.context_cloned` event per context repository; a resumed workspace clones only the ones it is missing. A context repository the user can no longer read fails the request with `Context repository <owner/name>: …`.
+A task can clone read-only repositories next to its primary one: the paperclip button at the right of the composer lists everything the user's own credentials can read (sign-in and personal token; platform credentials are not lent out this way), and the choice is remembered per primary repository. Each context repository is cloned to `/workspace/<name>` (`/workspace/<owner>__<name>` on a name clash), the agent's prompt opens with the layout on every turn, and the diff sidebar keeps showing the primary repository only. Expect one `git.context_cloned` event per context repository; a resumed workspace clones only the ones it is missing. A context repository the user can no longer read fails the request with `Context repository <owner/name>: …`.
 
 ## Plugins marketplace
 

@@ -75,7 +75,8 @@ export async function provisionRun(run: RunRow, deps: ProvisionDeps): Promise<vo
       provider: run.provider,
       repoFullName: run.repoFullName,
       repo: run.trigger.repo,
-      contextRepos: run.trigger.contextRepos,
+      // Triggers stored before context repositories existed have no list.
+      contextRepos: run.trigger.contextRepos ?? [],
       modelConnectionId: run.modelConnectionId,
       modelSnapshot: run.model,
     });

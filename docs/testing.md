@@ -34,11 +34,11 @@ Integration tests share one database and truncate between tests, so they run in 
 | `packages/sandbox/registry.test.ts` | a misconfigured provider fails at startup, naming the variable and the alternatives |
 | `packages/runtime/reporter.test.ts` | secrets do not leave the sandbox; telemetry loss cannot fail a run; the terminal status retries |
 | `packages/runtime/session-state.test.ts` | a transient control-plane 502 does not fail Pi checkpoint restore |
-| `packages/runtime/workspace.test.ts` | Git checkout reuse and diff capture stay bounded; context repositories clone after the primary, only the missing ones on resume, read-only ones cannot push |
+| `packages/runtime/workspace.test.ts` | Git checkout reuse and diff capture stay bounded; context repositories clone after the primary, only the missing ones on resume, read-only ones get their push URLs disabled |
 | `packages/runtime/git-credential-helper.test.ts` | the helper script maps host/path to a token variable and never embeds a value |
 | `packages/runtime/config.test.ts` | numbered per-repository tokens are redacted like the primary one |
 | `packages/protocol/workspace.test.ts` | workspace paths, clashes, token variable names, and the prompt preamble |
-| `apps/controller/http/context-repos.integration.test.ts` | context repositories are listed from every readable credential, resolved before anything durable is written, and persisted on the session |
+| `apps/controller/http/context-repos.integration.test.ts` | context repositories come from the user's own credentials only (never a platform credential), are resolved before anything durable is written, and persist on the session |
 | `apps/controller/plugins/catalog.test.ts` | the workspace description precedes the prompt on every turn, after skills on the first |
 | `packages/sandbox/project-image.live.test.ts` | app runtime installation into plain Debian and file preservation through a real microSandbox snapshot/resume; no model credentials |
 | `apps/controller/http/environments.integration.test.ts` | per-repository image mappings, preflight, and clearing |

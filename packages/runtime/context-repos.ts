@@ -46,13 +46,23 @@ async function cloneContextRepository(repo: SandboxWorkspaceRepo): Promise<void>
   throw new Error(`context repository ${repo.fullName}: clone failed: ${lastOutput}`);
 }
 
+/**
+ * `origin` loses its push URL, and the clone URL itself is rewritten for
+ * pushes, so `git push origin`, a re-added remote and `git push <url>` all
+ * fail locally. This guards against an agent forgetting the preamble; a
+ * determined one can still push through a different URL or the REST API.
+ */
 async function disablePush(repo: SandboxWorkspaceRepo): Promise<void> {
-  const result = await run("git", ["remote", "set-url", "--push", "origin", "DISABLED"], {
-    cwd: repo.path,
-  });
-  if (result.code !== 0) {
-    throw new Error(
-      `context repository ${repo.fullName}: could not disable push: ${result.output}`,
-    );
+  const steps: Array<{ args: string[]; cwd?: string }> = [
+    { args: ["remote", "set-url", "--push", "origin", "DISABLED"], cwd: repo.path },
+    { args: ["config", "--global", "--add", "url.DISABLED/.pushInsteadOf", repo.cloneUrl] },
+  ];
+  for (const step of steps) {
+    const result = await run("git", step.args, { cwd: step.cwd });
+    if (result.code !== 0) {
+      throw new Error(
+        `context repository ${repo.fullName}: could not disable push: ${result.output}`,
+      );
+    }
   }
 }

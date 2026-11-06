@@ -71,16 +71,12 @@ export function describeWorkspace(repos: SandboxWorkspaceRepo[]): string {
   if (repos.length <= 1) return "";
   const pathWidth = Math.max(...repos.map((repo) => repo.path.length)) + 2;
   const nameWidth = Math.max(...repos.map((repo) => repo.fullName.length)) + 2;
+  // Deliberately no branch name and no push instruction: whether and where
+  // the primary repository is pushed is the task's business, and a stale
+  // branch label on a later turn would mislead.
   const lines = repos.map((repo) => {
-    const access =
-      repo.access === "write"
-        ? `可写${repo.role === "primary" ? `（分支 ${repo.defaultBranch}）` : ""}`
-        : "只读";
+    const access = repo.access === "write" ? "可写" : "只读";
     return `- ${repo.path.padEnd(pathWidth)}${repo.fullName.padEnd(nameWidth)}${access}`;
   });
-  return [
-    "工作区：",
-    ...lines,
-    "只读仓库不要 commit / push。可写仓库的改动请 commit 后 push 到当前分支。",
-  ].join("\n");
+  return ["工作区：", ...lines, "只读仓库不要 commit / push。"].join("\n");
 }

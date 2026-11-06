@@ -27,8 +27,25 @@ describe("credentialHelperScript", () => {
     expect(script).not.toContain("ghp_");
   });
 
-  it("falls back to SCM_TOKEN for a host/path it does not know", () => {
+  it("falls back to SCM_TOKEN only on the primary repository's host", () => {
     const script = credentialHelperScript(repos, "x-access-token");
-    expect(script).toContain('*) token="${SCM_TOKEN:-}"');
+    expect(script).toContain('github.com/*) token="${SCM_TOKEN:-}"');
+    expect(script).toContain("*) exit 0");
+  });
+
+  it("matches host and path case-insensitively, as GitHub does", () => {
+    const script = credentialHelperScript(
+      [
+        {
+          host: "GitHub.com",
+          cloneUrl: "https://github.com/CT-KB/Team-KB.git",
+          tokenVar: "SCM_TOKEN",
+        },
+      ],
+      "x-access-token",
+    );
+    expect(script).toContain("tr '[:upper:]' '[:lower:]'");
+    expect(script).toContain('github.com/ct-kb/team-kb) token="$SCM_TOKEN"');
+    expect(script).not.toContain("Team-KB");
   });
 });

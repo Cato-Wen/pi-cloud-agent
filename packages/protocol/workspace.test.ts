@@ -70,15 +70,15 @@ describe("workspace description for the agent", () => {
     expect(describeWorkspace(planWorkspace(ref("acme", "widgets"), []))).toBe("");
   });
 
-  it("lists every repository with its path, access and the primary branch", () => {
+  it("lists every repository with its path and access, and forbids writing read-only ones", () => {
     const primary = { ...ref("food-truck", "master-data-management"), headBranch: "develop" };
     const plan = planWorkspace(primary, [context("ct-kb", "team-cookbook-kb")]);
     expect(describeWorkspace(plan)).toBe(
       [
         "工作区：",
-        "- /workspace/master-data-management  food-truck/master-data-management  可写（分支 develop）",
+        "- /workspace/master-data-management  food-truck/master-data-management  可写",
         "- /workspace/team-cookbook-kb        ct-kb/team-cookbook-kb             只读",
-        "只读仓库不要 commit / push。可写仓库的改动请 commit 后 push 到当前分支。",
+        "只读仓库不要 commit / push。",
       ].join("\n"),
     );
   });

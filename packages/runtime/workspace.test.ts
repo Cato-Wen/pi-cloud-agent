@@ -178,6 +178,7 @@ describe("context repositories", () => {
     queueChild(children, "", 0);
     queueChild(children, "", 0);
     queueChild(children, "", 0);
+    queueChild(children, "", 0);
 
     await prepareCheckout(multi, reporter);
 
@@ -202,6 +203,13 @@ describe("context repositories", () => {
     ]);
     expect(calls[2]?.[1]).toEqual(["remote", "set-url", "--push", "origin", "DISABLED"]);
     expect(calls[2]?.[2]).toMatchObject({ cwd: kbRepo.path });
+    expect(calls[3]?.[1]).toEqual([
+      "config",
+      "--global",
+      "--add",
+      "url.DISABLED/.pushInsteadOf",
+      kbRepo.cloneUrl,
+    ]);
     expect(reporter.log).toHaveBeenCalledWith("git.context_cloned", {
       fullName: kbRepo.fullName,
       path: kbRepo.path,
@@ -215,6 +223,7 @@ describe("context repositories", () => {
       String(path).replaceAll("\\", "/").startsWith(config.repo.path),
     );
     queueChild(children, "https://github.com/acme/widgets.git\n", 0);
+    queueChild(children, "", 0);
     queueChild(children, "", 0);
     queueChild(children, "", 0);
 

@@ -113,6 +113,7 @@ async function resolveContextRepos(
   for (const fullName of wanted) {
     const access = await resolveRepositoryAccess(database, config, user, fullName, "read", {
       fetchImpl,
+      ownCredentialsOnly: true,
     });
     if (access.mode === "none")
       throw new Error(`Context repository ${fullName}: ${access.reason}`);

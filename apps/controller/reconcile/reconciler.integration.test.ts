@@ -1,4 +1,4 @@
-import { SANDBOX_ENV, SandboxError } from "@pi-cloud-agent/protocol";
+import { SANDBOX_ENV, SandboxError, type Trigger } from "@pi-cloud-agent/protocol";
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { saveRepositorySandboxImage } from "../db/environments";
@@ -7,6 +7,7 @@ import type { RunRow } from "../db/schema";
 import { runs } from "../db/schema";
 import { createSessionTurn, getSession, parkSession } from "../db/sessions";
 import {
+  manualTrigger,
   seedRun,
   seedSession,
   seedTestUser,
@@ -52,6 +53,33 @@ describe("provisioning", () => {
     expect(env[SANDBOX_ENV.callbackToken]).toBeUndefined();
     expect(provider.created[0]?.secrets[SANDBOX_ENV.callbackToken]).toHaveLength(32);
     expect(provider.created[0]?.command).toContain("run.js");
+  });
+
+  it("provisions a run whose stored trigger predates context repositories", async () => {
+    const legacy = { ...manualTrigger() } as Partial<Trigger>;
+    delete legacy.contextRepos;
+    const run = await seedRun(database, { trigger: legacy as Trigger });
+    const provider = fakeProvider();
+    const received: unknown[] = [];
+    const loop = createReconciler({
+      config: testConfig({ SANDBOX_PROVIDER: "fake" }),
+      database,
+      broker: {
+        ...testCredentialBroker,
+        async mintForRun(input) {
+          received.push(input.contextRepos);
+          return testCredentialBroker.mintForRun(input);
+        },
+      },
+      log: silentLogger(),
+      createProvider: () => provider,
+    });
+
+    await tick(loop);
+
+    expect((await getRun(database, run.id))?.status).toBe("running");
+    expect(received).toEqual([[]]);
+    expect(provider.created[0]?.env[SANDBOX_ENV.workspaceRepos]).toBe("");
   });
 
   it("fails a run permanently when the sandbox cannot be created", async () => {
